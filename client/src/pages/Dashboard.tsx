@@ -21,7 +21,7 @@ type TabType = "dashboard" | "performance" | "chat" | "users" | "settings" | "co
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<TabType>("dashboard");
+  const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [user, setUser] = useState<User | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
 
