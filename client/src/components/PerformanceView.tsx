@@ -185,7 +185,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
         setActiveShift(data.shift);
         setShiftDuration(0);
         toast({
-          title: "Vardiya Başladı",
+          title: "Mesai Başladı",
           description: `Konum: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`,
         });
       } else {
@@ -199,7 +199,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
     } catch (error: any) {
       toast({
         title: "Hata",
-        description: error.message || "Vardiya başlatılamadı",
+        description: error.message || "Mesai başlatılamadı",
         variant: "destructive",
       });
     } finally {
@@ -226,7 +226,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
         const data = await response.json();
         setActiveShift(null);
         toast({
-          title: "Vardiya Bitti",
+          title: "Mesai Bitti",
           description: `Süre: ${formatTime(data.shift.durationSeconds)} - Konum: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`,
         });
       } else {
@@ -240,7 +240,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
     } catch (error: any) {
       toast({
         title: "Hata",
-        description: error.message || "Vardiya bitirilemedi",
+        description: error.message || "Mesai bitirilemedi",
         variant: "destructive",
       });
     } finally {
@@ -373,13 +373,13 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
       {/* Shift Controls */}
       <Card>
         <CardHeader>
-          <CardTitle>Vardiya Kontrolü</CardTitle>
+          <CardTitle>Mesai Kontrolü</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold" data-testid="text-shift-status">
-                {activeShift && !activeShift.endTime ? "Vardiya Aktif" : "Vardiya Dışı"}
+                {activeShift && !activeShift.endTime ? "Mesai Aktif" : "Mesai Dışı"}
               </h3>
               <p className="text-sm text-muted-foreground" data-testid="text-shift-duration">
                 Toplam Süre: {formatTime(shiftDuration)}
@@ -406,12 +406,12 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
               ) : activeShift && !activeShift.endTime ? (
                 <>
                   <Square className="mr-2 h-5 w-5" />
-                  Vardiya Bitir
+                  Mesai Bitir
                 </>
               ) : (
                 <>
                   <Play className="mr-2 h-5 w-5" />
-                  Vardiya Başlat
+                  Mesai Başlat
                 </>
               )}
             </Button>
@@ -430,7 +430,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Aktivite Başlat</Label>
+                  <Label>Aktivite Ekle</Label>
                   <Select
                     value={currentActivity ? currentActivity.type : selectedActivityType}
                     onValueChange={setSelectedActivityType}
@@ -457,7 +457,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                 <div className="flex gap-2">
                   <Button
                     onClick={handleStartActivity}
-                    disabled={currentActivity !== null || !selectedActivityType}
+                    disabled={!selectedActivityType}
                     className="flex-1"
                     data-testid="button-start-activity"
                   >
@@ -466,7 +466,6 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                   </Button>
                   <Button
                     onClick={handleEndActivity}
-                    disabled={currentActivity === null}
                     variant="destructive"
                     className="flex-1"
                     data-testid="button-end-activity"
