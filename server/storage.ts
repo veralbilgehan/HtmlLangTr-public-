@@ -6,7 +6,7 @@ import {
   type Message, type InsertMessage
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, desc } from "drizzle-orm";
+import { eq, and, or, desc, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -74,7 +74,7 @@ export class DatabaseStorage implements IStorage {
     const [shift] = await db
       .select()
       .from(shifts)
-      .where(and(eq(shifts.userId, userId), eq(shifts.endTime, null)))
+      .where(and(eq(shifts.userId, userId), isNull(shifts.endTime)))
       .orderBy(desc(shifts.startTime))
       .limit(1);
     return shift || undefined;
@@ -107,7 +107,7 @@ export class DatabaseStorage implements IStorage {
     const [activity] = await db
       .select()
       .from(activities)
-      .where(and(eq(activities.userId, userId), eq(activities.endTime, null)))
+      .where(and(eq(activities.userId, userId), isNull(activities.endTime)))
       .orderBy(desc(activities.startTime))
       .limit(1);
     return activity || undefined;
