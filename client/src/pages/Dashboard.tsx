@@ -148,7 +148,7 @@ export default function Dashboard() {
                   <ChevronDown className="h-4 w-4 ml-2" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
+              <DropdownMenuContent align="start" className="w-48 bg-white shadow-lg border border-gray-200">
                 <DropdownMenuItem 
                   onClick={() => setActiveTab("dashboard")}
                   data-testid="menu-dashboard"
