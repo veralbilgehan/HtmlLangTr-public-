@@ -3,8 +3,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Paperclip, File, Search, X, Download, Loader2 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { Send, Paperclip, File, Search, X, Download, Loader2, Camera, Image } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@/lib/auth";
@@ -45,8 +45,13 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -63,6 +68,14 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [cameraStream]);
 
   const fetchUsers = async () => {
     try {
@@ -113,9 +126,101 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
   const clearSelectedFile = () => {
     setSelectedFile(null);
+    setCapturedImage(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+
+  const startCamera = async () => {
+    try {
+      let stream: MediaStream;
+      
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
+      
+      setCameraStream(stream);
+      setShowCamera(true);
+      
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 100);
+    } catch (error: any) {
+      let message = "Kamera açılamadı";
+      if (error.name === "NotAllowedError") {
+        message = "Kamera izni reddedildi. Lütfen tarayıcı ayarlarından izin verin.";
+      } else if (error.name === "NotFoundError") {
+        message = "Kamera bulunamadı";
+      }
+      toast({
+        title: "Hata",
+        description: message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopCamera = useCallback(() => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setShowCamera(false);
+    setCapturedImage(null);
+  }, [cameraStream]);
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(video, 0, 0);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        setCapturedImage(dataUrl);
+        
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop());
+          setCameraStream(null);
+        }
+      }
+    }
+  };
+
+  const useCapturedPhoto = async () => {
+    if (capturedImage) {
+      try {
+        const res = await fetch(capturedImage);
+        const blob = await res.blob();
+        const fileName = `foto_${Date.now()}.jpg`;
+        const file = new window.File([blob], fileName, { type: "image/jpeg" });
+        setSelectedFile(file);
+        setShowCamera(false);
+        setCapturedImage(null);
+      } catch (error) {
+        console.error("Error creating file:", error);
+      }
+    }
+  };
+
+  const retakePhoto = () => {
+    setCapturedImage(null);
+    startCamera();
   };
 
   const uploadFile = async (file: File) => {
@@ -212,9 +317,13 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
   const isOwnMessage = (msg: Message) => msg.senderId === user.id;
 
+  const isImageFile = (type: string | null) => {
+    return type?.startsWith("image/");
+  };
+
   return (
-    <div className="flex h-[500px] max-h-[70vh] border rounded-lg overflow-hidden bg-white shadow-sm">
-      {/* Hidden file input */}
+    <div className="flex h-[500px] max-h-[70vh] border rounded-lg overflow-hidden bg-white shadow-sm relative">
+      {/* Hidden elements */}
       <input
         type="file"
         ref={fileInputRef}
@@ -223,6 +332,76 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt"
         data-testid="input-file"
       />
+      <canvas ref={canvasRef} className="hidden" />
+
+      {/* Camera Modal */}
+      {showCamera && (
+        <div className="absolute inset-0 z-50 bg-black flex flex-col">
+          <div className="flex items-center justify-between p-3 bg-black/80">
+            <h3 className="text-white font-medium text-sm">Fotoğraf Çek</h3>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={stopCamera}
+              className="text-white hover:bg-white/20 h-8 w-8"
+              data-testid="button-close-camera"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          <div className="flex-1 flex items-center justify-center overflow-hidden">
+            {capturedImage ? (
+              <img
+                src={capturedImage}
+                alt="Çekilen fotoğraf"
+                className="max-w-full max-h-full object-contain"
+              />
+            ) : (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="max-w-full max-h-full object-contain"
+              />
+            )}
+          </div>
+
+          <div className="p-4 bg-black/80 flex items-center justify-center gap-4">
+            {capturedImage ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={retakePhoto}
+                  className="bg-white/10 text-white border-white/30 hover:bg-white/20"
+                  data-testid="button-retake-photo"
+                >
+                  <Camera className="mr-2 h-4 w-4" />
+                  Tekrar Çek
+                </Button>
+                <Button
+                  onClick={useCapturedPhoto}
+                  className="bg-primary"
+                  data-testid="button-use-photo"
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Kullan
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={capturePhoto}
+                size="lg"
+                className="rounded-full h-14 w-14 bg-white hover:bg-gray-200"
+                data-testid="button-capture-photo"
+              >
+                <Camera className="h-6 w-6 text-black" />
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Sidebar */}
       <div className="w-64 md:w-80 bg-slate-50 border-r flex flex-col shrink-0">
@@ -278,10 +457,10 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-white">
+      <div className="flex-1 flex flex-col bg-white min-w-0">
         {activeUser ? (
           <>
-            <div className="p-4 border-b flex items-center justify-between bg-white">
+            <div className="p-4 border-b flex items-center justify-between bg-white shrink-0">
               <div className="flex items-center gap-3">
                 <Avatar>
                   {activeUser.avatar ? (
@@ -293,7 +472,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                   )}
                 </Avatar>
                 <div>
-                  <h3 className="font-bold">{activeUser.fullName}</h3>
+                  <h3 className="font-bold text-sm">{activeUser.fullName}</h3>
                   <p className="text-xs text-green-600 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-600" /> Çevrimiçi
                   </p>
@@ -317,54 +496,69 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                     )}
                   >
                     {msg.fileUrl && (
-                      <a
-                        href={msg.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={cn(
-                          "flex items-center gap-3 p-2 rounded-lg mb-2",
-                          isOwnMessage(msg) ? "bg-primary-foreground/10" : "bg-slate-100"
-                        )}
-                        data-testid={`file-download-${msg.id}`}
-                      >
-                        <div
-                          className={cn(
-                            "p-2 rounded",
-                            isOwnMessage(msg) ? "bg-primary-foreground/20" : "bg-slate-200"
-                          )}
+                      isImageFile(msg.fileType) ? (
+                        <a
+                          href={msg.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block mb-2"
                         >
-                          <File
+                          <img
+                            src={msg.fileUrl}
+                            alt={msg.fileName || "Fotoğraf"}
+                            className="max-w-full rounded-lg max-h-48 object-cover"
+                          />
+                        </a>
+                      ) : (
+                        <a
+                          href={msg.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={cn(
+                            "flex items-center gap-3 p-2 rounded-lg mb-2",
+                            isOwnMessage(msg) ? "bg-primary-foreground/10" : "bg-slate-100"
+                          )}
+                          data-testid={`file-download-${msg.id}`}
+                        >
+                          <div
                             className={cn(
-                              "h-6 w-6",
+                              "p-2 rounded",
+                              isOwnMessage(msg) ? "bg-primary-foreground/20" : "bg-slate-200"
+                            )}
+                          >
+                            <File
+                              className={cn(
+                                "h-6 w-6",
+                                isOwnMessage(msg) ? "text-primary-foreground" : "text-blue-500"
+                              )}
+                            />
+                          </div>
+                          <div className="flex-1 overflow-hidden">
+                            <p
+                              className={cn(
+                                "font-medium text-sm truncate",
+                                isOwnMessage(msg) ? "text-primary-foreground" : "text-slate-800"
+                              )}
+                            >
+                              {msg.fileName}
+                            </p>
+                            <p
+                              className={cn(
+                                "text-xs",
+                                isOwnMessage(msg) ? "text-primary-foreground/70" : "text-slate-500"
+                              )}
+                            >
+                              {msg.fileSize ? formatFileSize(msg.fileSize) : ""}
+                            </p>
+                          </div>
+                          <Download
+                            className={cn(
+                              "h-4 w-4",
                               isOwnMessage(msg) ? "text-primary-foreground" : "text-blue-500"
                             )}
                           />
-                        </div>
-                        <div className="flex-1 overflow-hidden">
-                          <p
-                            className={cn(
-                              "font-medium text-sm truncate",
-                              isOwnMessage(msg) ? "text-primary-foreground" : "text-slate-800"
-                            )}
-                          >
-                            {msg.fileName}
-                          </p>
-                          <p
-                            className={cn(
-                              "text-xs",
-                              isOwnMessage(msg) ? "text-primary-foreground/70" : "text-slate-500"
-                            )}
-                          >
-                            {msg.fileSize ? formatFileSize(msg.fileSize) : ""}
-                          </p>
-                        </div>
-                        <Download
-                          className={cn(
-                            "h-4 w-4",
-                            isOwnMessage(msg) ? "text-primary-foreground" : "text-blue-500"
-                          )}
-                        />
-                      </a>
+                        </a>
+                      )
                     )}
                     {msg.content && <p className="text-sm">{msg.content}</p>}
                     <p className="text-[10px] mt-1 text-right opacity-70">
@@ -381,11 +575,15 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Selected file preview */}
+            {/* Selected file/image preview */}
             {selectedFile && (
-              <div className="px-4 py-2 bg-blue-50 border-t border-blue-100 flex items-center gap-3">
-                <File className="h-5 w-5 text-blue-500" />
-                <div className="flex-1 overflow-hidden">
+              <div className="px-3 py-2 bg-blue-50 border-t border-blue-100 flex items-center gap-3 shrink-0">
+                {selectedFile.type.startsWith("image/") ? (
+                  <Image className="h-5 w-5 text-blue-500 shrink-0" />
+                ) : (
+                  <File className="h-5 w-5 text-blue-500 shrink-0" />
+                )}
+                <div className="flex-1 overflow-hidden min-w-0">
                   <p className="text-sm font-medium truncate">{selectedFile.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {formatFileSize(selectedFile.size)}
@@ -395,7 +593,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                   variant="ghost"
                   size="icon"
                   onClick={clearSelectedFile}
-                  className="h-8 w-8"
+                  className="h-8 w-8 shrink-0"
                   data-testid="button-clear-file"
                 >
                   <X className="h-4 w-4" />
@@ -403,7 +601,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
               </div>
             )}
 
-            <div className="p-3 bg-white border-t">
+            <div className="p-3 bg-white border-t shrink-0">
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
@@ -414,6 +612,16 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                   data-testid="button-attach-file"
                 >
                   <Paperclip className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground shrink-0 h-8 w-8"
+                  onClick={startCamera}
+                  disabled={isSending}
+                  data-testid="button-open-camera"
+                >
+                  <Camera className="h-4 w-4" />
                 </Button>
                 <Input
                   value={messageInput}
