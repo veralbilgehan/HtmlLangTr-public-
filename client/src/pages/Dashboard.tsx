@@ -6,6 +6,9 @@ import { LogOut, LayoutDashboard, Activity, MessageSquare, Settings, Users, Buil
 import DashboardHome from "@/components/DashboardHome";
 import PerformanceView from "@/components/PerformanceView";
 import ChatInterface from "@/components/ChatInterface";
+import UserManagement from "@/components/UserManagement";
+import CompanyManagement from "@/components/CompanyManagement";
+import ActivitySettings from "@/components/ActivitySettings";
 import { getCurrentUser, getCurrentCompany, logout, type User, type Company } from "@/lib/auth";
 
 type TabType = "dashboard" | "performance" | "chat" | "users" | "settings" | "companies";
@@ -182,27 +185,9 @@ export default function Dashboard() {
           {activeTab === "dashboard" && <DashboardHome user={user} />}
           {activeTab === "performance" && <PerformanceView user={user} />}
           {activeTab === "chat" && <ChatInterface user={user} />}
-          {activeTab === "users" && isManager && (
-            <div className="text-center py-12">
-              <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h2 className="text-xl font-bold mb-2">Kullanıcı Yönetimi</h2>
-              <p className="text-muted-foreground">Bu bölüm yakında eklenecek</p>
-            </div>
-          )}
-          {activeTab === "companies" && isSuperAdmin && (
-            <div className="text-center py-12">
-              <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h2 className="text-xl font-bold mb-2">Şirket Yönetimi</h2>
-              <p className="text-muted-foreground">Bu bölüm yakında eklenecek</p>
-            </div>
-          )}
-          {activeTab === "settings" && isManager && (
-            <div className="text-center py-12">
-              <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h2 className="text-xl font-bold mb-2">Puan Ayarları</h2>
-              <p className="text-muted-foreground">Bu bölüm yakında eklenecek</p>
-            </div>
-          )}
+          {activeTab === "users" && isManager && <UserManagement user={user} />}
+          {activeTab === "companies" && isSuperAdmin && <CompanyManagement user={user} />}
+          {activeTab === "settings" && isManager && <ActivitySettings user={user} />}
         </main>
       </div>
     </div>

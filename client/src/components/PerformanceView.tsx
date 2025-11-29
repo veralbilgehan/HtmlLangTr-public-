@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import type { User } from "@/lib/auth";
 
 interface PerformanceViewProps {
@@ -32,28 +33,55 @@ interface Shift {
   endLongitude: number | null;
 }
 
-const ACTIVITY_TYPES = [
-  { key: "customer", label: "Müşteri Görüşmesi", points: 10 },
-  { key: "phone", label: "Telefon Görüşmesi", points: 5 },
-  { key: "vehicle", label: "Araç Teslimatı", points: 15 },
-  { key: "other", label: "Diğer", points: 3 },
-];
+interface ActivityType {
+  id: string;
+  name: string;
+  category: string;
+  points: number;
+  companyId: string | null;
+  isDefault: boolean;
+}
 
 export default function PerformanceView({ user }: PerformanceViewProps) {
   const { toast } = useToast();
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [shiftDuration, setShiftDuration] = useState(0);
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
-  const [currentActivityKey, setCurrentActivityKey] = useState<string | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-  const [loadingActivity, setLoadingActivity] = useState<string | null>(null);
-  const [durations, setDurations] = useState({
-    customer: "",
-    phone: "",
-    vehicle: "",
-    other: "",
+  const [loadingActivityName, setLoadingActivityName] = useState<string | null>(null);
+  const [durations, setDurations] = useState<Record<string, string>>({});
+
+  const { data: activityTypesData, isLoading: isLoadingTypes, error: typesError } = useQuery<{ activityTypes: ActivityType[] }>({
+    queryKey: ["activity-types"],
+    queryFn: async () => {
+      const response = await fetch("/api/activity-types", { credentials: "include" });
+      if (!response.ok) throw new Error("Aktivite türleri yüklenemedi");
+      return response.json();
+    },
   });
+
+  const activityTypes = activityTypesData?.activityTypes || [];
+
+  useEffect(() => {
+    if (typesError) {
+      toast({
+        title: "Hata",
+        description: "Aktivite türleri yüklenemedi",
+        variant: "destructive",
+      });
+    }
+  }, [typesError]);
+
+  useEffect(() => {
+    if (activityTypes.length > 0) {
+      const initialDurations: Record<string, string> = {};
+      activityTypes.forEach(at => {
+        initialDurations[at.name] = "";
+      });
+      setDurations(prev => ({ ...initialDurations, ...prev }));
+    }
+  }, [activityTypes]);
 
   useEffect(() => {
     fetchActiveShift();
@@ -102,9 +130,8 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
         const data = await response.json();
         if (data.activity) {
           setCurrentActivity(data.activity);
-          // Find the matching activity key
-          const matchingType = ACTIVITY_TYPES.find(t => t.label === data.activity.type);
-          setCurrentActivityKey(matchingType?.key || null);
+        } else {
+          setCurrentActivity(null);
         }
       }
     } catch (error) {
@@ -254,7 +281,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
     }
   };
 
-  const handleStartActivity = async (activityKey: string, activityLabel: string) => {
+  const handleStartActivity = async (activityName: string) => {
     if (currentActivity) {
       toast({
         title: "Uyarı",
@@ -264,14 +291,14 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
       return;
     }
 
-    setLoadingActivity(activityKey);
+    setLoadingActivityName(activityName);
     try {
       const response = await fetch("/api/activities/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          type: activityLabel,
+          type: activityName,
           shiftId: activeShift?.id || null,
         }),
       });
@@ -279,11 +306,10 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
       if (response.ok) {
         const data = await response.json();
         setCurrentActivity(data.activity);
-        setCurrentActivityKey(activityKey);
         await fetchActivities();
         toast({
           title: "Aktivite Başladı",
-          description: `${activityLabel} kaydediliyor`,
+          description: `${activityName} kaydediliyor`,
         });
       } else {
         const error = await response.json();
@@ -300,21 +326,21 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
         variant: "destructive",
       });
     } finally {
-      setLoadingActivity(null);
+      setLoadingActivityName(null);
     }
   };
 
-  const handleEndActivity = async (activityKey: string, activityLabel: string) => {
+  const handleEndActivity = async (activityName: string) => {
     if (!currentActivity) {
       toast({
         title: "Uyarı",
-        description: `Önce ${activityLabel} aktivitesini başlatmalısınız`,
+        description: `Önce ${activityName} aktivitesini başlatmalısınız`,
         variant: "destructive",
       });
       return;
     }
 
-    if (currentActivityKey !== activityKey) {
+    if (currentActivity.type !== activityName) {
       toast({
         title: "Uyarı",
         description: `Şu anda aktif olan aktivite: ${currentActivity.type}`,
@@ -323,7 +349,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
       return;
     }
 
-    setLoadingActivity(activityKey);
+    setLoadingActivityName(activityName);
     try {
       const response = await fetch("/api/activities/end", {
         method: "POST",
@@ -340,17 +366,16 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
         
         setDurations(prev => ({
           ...prev,
-          [activityKey]: durationMinutes.toString(),
+          [activityName]: durationMinutes.toString(),
         }));
 
         setCurrentActivity(null);
-        setCurrentActivityKey(null);
         await fetchActivities();
         await fetchActiveActivity();
 
         toast({
           title: "Aktivite Tamamlandı",
-          description: `${activityLabel} - Süre: ${durationMinutes} dakika`,
+          description: `${activityName} - Süre: ${durationMinutes} dakika`,
         });
       } else {
         const error = await response.json();
@@ -367,7 +392,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
         variant: "destructive",
       });
     } finally {
-      setLoadingActivity(null);
+      setLoadingActivityName(null);
     }
   };
 
@@ -391,6 +416,18 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
   const formatCoordinates = (lat: number | null, lng: number | null) => {
     if (lat === null || lng === null) return "Konum yok";
     return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  };
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'activity': return 'Aktivite';
+      case 'sales': return 'Satış';
+      default: return category;
+    }
+  };
+
+  const isCurrentActivityType = (activityName: string) => {
+    return currentActivity?.type === activityName;
   };
 
   return (
@@ -467,56 +504,80 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                 {/* Start Activities Column */}
                 <div className="space-y-3">
                   <h3 className="font-semibold text-primary border-b pb-2 text-sm">Başlat Aktiviteleri</h3>
-                  {ACTIVITY_TYPES.map((activity) => (
-                    <div key={`start-${activity.key}`} className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg">
-                      <span className="text-xs font-medium truncate flex-1 min-w-0">{activity.label}</span>
-                      <Button
-                        onClick={() => handleStartActivity(activity.key, activity.label)}
-                        disabled={loadingActivity === activity.key || currentActivity !== null}
-                        size="sm"
-                        className="shrink-0 text-xs px-2 py-1 h-7"
-                        data-testid={`button-start-${activity.key}`}
-                      >
-                        {loadingActivity === activity.key ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : currentActivityKey === activity.key ? (
-                          <span className="text-xs">Aktif</span>
-                        ) : (
-                          <>
-                            <Play className="mr-1 h-3 w-3" />
-                            Başlat
-                          </>
-                        )}
-                      </Button>
+                  {isLoadingTypes ? (
+                    <div className="flex items-center gap-2 p-4">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      <p className="text-sm text-muted-foreground">Aktivite türleri yükleniyor...</p>
                     </div>
-                  ))}
+                  ) : activityTypes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Aktivite türü bulunamadı</p>
+                  ) : (
+                    activityTypes.map((activityType) => (
+                      <div key={`start-${activityType.id}`} className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs font-medium truncate block">{activityType.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{activityType.points} puan</span>
+                        </div>
+                        <Button
+                          onClick={() => handleStartActivity(activityType.name)}
+                          disabled={loadingActivityName === activityType.name || currentActivity !== null}
+                          size="sm"
+                          className="shrink-0 text-xs px-2 py-1 h-7"
+                          data-testid={`button-start-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}
+                        >
+                          {loadingActivityName === activityType.name ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : isCurrentActivityType(activityType.name) ? (
+                            <span className="text-xs">Aktif</span>
+                          ) : (
+                            <>
+                              <Play className="mr-1 h-3 w-3" />
+                              Başlat
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 {/* End Activities Column */}
                 <div className="space-y-3">
                   <h3 className="font-semibold text-destructive border-b pb-2 text-sm">Bitiş Aktiviteleri</h3>
-                  {ACTIVITY_TYPES.map((activity) => (
-                    <div key={`end-${activity.key}`} className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg">
-                      <span className="text-xs font-medium truncate flex-1 min-w-0">{activity.label}</span>
-                      <Button
-                        onClick={() => handleEndActivity(activity.key, activity.label)}
-                        disabled={loadingActivity === activity.key || currentActivityKey !== activity.key}
-                        variant={currentActivityKey === activity.key ? "destructive" : "outline"}
-                        size="sm"
-                        className="shrink-0 text-xs px-2 py-1 h-7"
-                        data-testid={`button-end-${activity.key}`}
-                      >
-                        {loadingActivity === activity.key ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <>
-                            <Square className="mr-1 h-3 w-3" />
-                            Bitir
-                          </>
-                        )}
-                      </Button>
+                  {isLoadingTypes ? (
+                    <div className="flex items-center gap-2 p-4">
+                      <Loader2 className="h-4 w-4 animate-spin text-destructive" />
+                      <p className="text-sm text-muted-foreground">Aktivite türleri yükleniyor...</p>
                     </div>
-                  ))}
+                  ) : activityTypes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Aktivite türü bulunamadı</p>
+                  ) : (
+                    activityTypes.map((activityType) => (
+                      <div key={`end-${activityType.id}`} className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs font-medium truncate block">{activityType.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{activityType.points} puan</span>
+                        </div>
+                        <Button
+                          onClick={() => handleEndActivity(activityType.name)}
+                          disabled={loadingActivityName === activityType.name || !isCurrentActivityType(activityType.name)}
+                          variant={isCurrentActivityType(activityType.name) ? "destructive" : "outline"}
+                          size="sm"
+                          className="shrink-0 text-xs px-2 py-1 h-7"
+                          data-testid={`button-end-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}
+                        >
+                          {loadingActivityName === activityType.name ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <>
+                              <Square className="mr-1 h-3 w-3" />
+                              Bitir
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -524,17 +585,17 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
               <div className="border-t mt-4 pt-4 space-y-3">
                 <h3 className="font-semibold text-sm">Aktivite Süreleri (Dakika)</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {ACTIVITY_TYPES.map((activity) => (
-                    <div key={`duration-${activity.key}`} className="space-y-1">
-                      <Label htmlFor={`${activity.key}-duration`} className="text-xs truncate block">{activity.label}</Label>
+                  {activityTypes.slice(0, 4).map((activityType) => (
+                    <div key={`duration-${activityType.id}`} className="space-y-1">
+                      <Label htmlFor={`${activityType.id}-duration`} className="text-xs truncate block">{activityType.name}</Label>
                       <Input
-                        id={`${activity.key}-duration`}
-                        data-testid={`input-duration-${activity.key}`}
+                        id={`${activityType.id}-duration`}
+                        data-testid={`input-duration-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}
                         type="number"
                         placeholder="0"
                         className="bg-white h-8 text-sm"
-                        value={durations[activity.key as keyof typeof durations]}
-                        onChange={(e) => setDurations({ ...durations, [activity.key]: e.target.value })}
+                        value={durations[activityType.name] || ""}
+                        onChange={(e) => setDurations({ ...durations, [activityType.name]: e.target.value })}
                       />
                     </div>
                   ))}
@@ -597,29 +658,39 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
               <thead>
                 <tr className="border-b bg-slate-50">
                   <th className="text-left p-3 font-semibold">Aktivite Türü</th>
+                  <th className="text-center p-3 font-semibold">Kategori</th>
                   <th className="text-center p-3 font-semibold">Adet</th>
                   <th className="text-center p-3 font-semibold">Puan</th>
                   <th className="text-center p-3 font-semibold">Toplam Puan</th>
                 </tr>
               </thead>
               <tbody>
-                {ACTIVITY_TYPES.map((activityType) => {
+                {activityTypes.map((activityType) => {
                   const count = activities.filter(
-                    (a) => a.type === activityType.label && a.endTime
+                    (a) => a.type === activityType.name && a.endTime
                   ).length;
                   const totalPoints = count * activityType.points;
                   return (
-                    <tr key={activityType.key} className="border-b hover:bg-slate-50">
-                      <td className="p-3" data-testid={`perf-label-${activityType.key}`}>
-                        {activityType.label}
+                    <tr key={activityType.id} className="border-b hover:bg-slate-50">
+                      <td className="p-3" data-testid={`perf-label-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}>
+                        {activityType.name}
                       </td>
-                      <td className="text-center p-3" data-testid={`perf-count-${activityType.key}`}>
+                      <td className="text-center p-3">
+                        <Badge variant="outline" className={
+                          activityType.category === 'sales' 
+                            ? 'bg-green-100 text-green-800 border-green-200'
+                            : 'bg-blue-100 text-blue-800 border-blue-200'
+                        }>
+                          {getCategoryLabel(activityType.category)}
+                        </Badge>
+                      </td>
+                      <td className="text-center p-3" data-testid={`perf-count-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}>
                         {count}
                       </td>
-                      <td className="text-center p-3 text-muted-foreground" data-testid={`perf-points-${activityType.key}`}>
+                      <td className="text-center p-3 text-muted-foreground" data-testid={`perf-points-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}>
                         {activityType.points}
                       </td>
-                      <td className="text-center p-3 font-semibold text-primary" data-testid={`perf-total-${activityType.key}`}>
+                      <td className="text-center p-3 font-semibold text-primary" data-testid={`perf-total-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}>
                         {totalPoints}
                       </td>
                     </tr>
@@ -628,11 +699,11 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
               </tbody>
               <tfoot>
                 <tr className="bg-primary/10 font-bold">
-                  <td className="p-3" colSpan={3}>Günlük Toplam Performans</td>
+                  <td className="p-3" colSpan={4}>Günlük Toplam Performans</td>
                   <td className="text-center p-3 text-primary text-lg" data-testid="perf-grand-total">
-                    {ACTIVITY_TYPES.reduce((total, activityType) => {
+                    {activityTypes.reduce((total, activityType) => {
                       const count = activities.filter(
-                        (a) => a.type === activityType.label && a.endTime
+                        (a) => a.type === activityType.name && a.endTime
                       ).length;
                       return total + count * activityType.points;
                     }, 0)}
