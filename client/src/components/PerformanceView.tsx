@@ -483,46 +483,46 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
       </Card>
 
       <div className="space-y-6">
-        {/* Activity Management */}
+        {/* Current Activity Status */}
+        {currentActivity && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm font-semibold text-blue-900">
+              Aktif: {currentActivity.type}
+            </p>
+            <p className="text-xs text-blue-700">
+              Başlangıç: {formatDate(currentActivity.startTime)}
+            </p>
+          </div>
+        )}
+
+        {/* Activity Management - 2 Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Section 1: Müşteri İşlemleri */}
           <Card>
-            <CardHeader>
-              <CardTitle>Aktivite Yönetimi</CardTitle>
-              {currentActivity && (
-                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm font-semibold text-blue-900">
-                    Aktif: {currentActivity.type}
-                  </p>
-                  <p className="text-xs text-blue-700">
-                    Başlangıç: {formatDate(currentActivity.startTime)}
-                  </p>
-                </div>
-              )}
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Müşteri İşlemleri</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Start Activities Column */}
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-primary border-b pb-2 text-sm">Başlat Aktiviteleri</h3>
-                  {isLoadingTypes ? (
-                    <div className="flex items-center gap-2 p-4">
-                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      <p className="text-sm text-muted-foreground">Aktivite türleri yükleniyor...</p>
-                    </div>
-                  ) : activityTypes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Aktivite türü bulunamadı</p>
-                  ) : (
-                    activityTypes.map((activityType) => (
-                      <div key={`start-${activityType.id}`} className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg">
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-medium truncate block">{activityType.name}</span>
-                          <span className="text-[10px] text-muted-foreground">{activityType.points} puan</span>
-                        </div>
+            <CardContent className="space-y-3">
+              {isLoadingTypes ? (
+                <div className="flex items-center gap-2 p-4">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Yükleniyor...</p>
+                </div>
+              ) : (
+                activityTypes
+                  .filter(at => at.category === 'activity' || at.category === 'other')
+                  .map((activityType) => (
+                    <div key={activityType.id} className="flex items-center justify-between gap-2 p-3 bg-slate-50 rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium truncate block">{activityType.name}</span>
+                        <span className="text-xs text-muted-foreground">{activityType.points} puan</span>
+                      </div>
+                      <div className="flex gap-2">
                         <Button
                           onClick={() => handleStartActivity(activityType.name)}
                           disabled={loadingActivityName === activityType.name || currentActivity !== null}
                           size="sm"
-                          className="shrink-0 text-xs px-2 py-1 h-7"
+                          className="shrink-0 text-xs px-3 h-8"
                           data-testid={`button-start-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}
                         >
                           {loadingActivityName === activityType.name ? (
@@ -536,34 +536,12 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                             </>
                           )}
                         </Button>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* End Activities Column */}
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-destructive border-b pb-2 text-sm">Bitiş Aktiviteleri</h3>
-                  {isLoadingTypes ? (
-                    <div className="flex items-center gap-2 p-4">
-                      <Loader2 className="h-4 w-4 animate-spin text-destructive" />
-                      <p className="text-sm text-muted-foreground">Aktivite türleri yükleniyor...</p>
-                    </div>
-                  ) : activityTypes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Aktivite türü bulunamadı</p>
-                  ) : (
-                    activityTypes.map((activityType) => (
-                      <div key={`end-${activityType.id}`} className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg">
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-medium truncate block">{activityType.name}</span>
-                          <span className="text-[10px] text-muted-foreground">{activityType.points} puan</span>
-                        </div>
                         <Button
                           onClick={() => handleEndActivity(activityType.name)}
                           disabled={loadingActivityName === activityType.name || !isCurrentActivityType(activityType.name)}
                           variant={isCurrentActivityType(activityType.name) ? "destructive" : "outline"}
                           size="sm"
-                          className="shrink-0 text-xs px-2 py-1 h-7"
+                          className="shrink-0 text-xs px-3 h-8"
                           data-testid={`button-end-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}
                         >
                           {loadingActivityName === activityType.name ? (
@@ -576,75 +554,111 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                           )}
                         </Button>
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Duration Inputs */}
-              <div className="border-t mt-4 pt-4 space-y-3">
-                <h3 className="font-semibold text-sm">Aktivite Süreleri (Dakika)</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {activityTypes.slice(0, 4).map((activityType) => (
-                    <div key={`duration-${activityType.id}`} className="space-y-1">
-                      <Label htmlFor={`${activityType.id}-duration`} className="text-xs truncate block">{activityType.name}</Label>
-                      <Input
-                        id={`${activityType.id}-duration`}
-                        data-testid={`input-duration-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}
-                        type="number"
-                        placeholder="0"
-                        className="bg-white h-8 text-sm"
-                        value={durations[activityType.name] || ""}
-                        onChange={(e) => setDurations({ ...durations, [activityType.name]: e.target.value })}
-                      />
                     </div>
-                  ))}
-                </div>
-                <Button onClick={saveDurations} className="w-full h-8 text-sm" data-testid="button-save-durations">
-                  Süreleri Kaydet
-                </Button>
-              </div>
+                  ))
+              )}
             </CardContent>
           </Card>
 
-          {/* Recent Activities */}
+          {/* Section 2: Satışlar */}
           <Card>
-            <CardHeader>
-              <CardTitle>Son Aktiviteler</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Satışlar</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {activities.slice(0, 5).map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                    data-testid={`activity-${activity.id}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium text-sm">{activity.type}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(activity.startTime)}
-                          {activity.endTime && ` - ${formatDate(activity.endTime)}`}
-                        </p>
+            <CardContent className="space-y-3">
+              {isLoadingTypes ? (
+                <div className="flex items-center gap-2 p-4">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Yükleniyor...</p>
+                </div>
+              ) : (
+                activityTypes
+                  .filter(at => at.category === 'sales')
+                  .map((activityType) => (
+                    <div key={activityType.id} className="flex items-center justify-between gap-2 p-3 bg-green-50 rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium truncate block">{activityType.name}</span>
+                        <span className="text-xs text-green-700">{activityType.points} puan</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleStartActivity(activityType.name)}
+                          disabled={loadingActivityName === activityType.name || currentActivity !== null}
+                          size="sm"
+                          className="shrink-0 text-xs px-3 h-8 bg-green-600 hover:bg-green-700"
+                          data-testid={`button-start-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}
+                        >
+                          {loadingActivityName === activityType.name ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : isCurrentActivityType(activityType.name) ? (
+                            <span className="text-xs">Aktif</span>
+                          ) : (
+                            <>
+                              <Play className="mr-1 h-3 w-3" />
+                              Başlat
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => handleEndActivity(activityType.name)}
+                          disabled={loadingActivityName === activityType.name || !isCurrentActivityType(activityType.name)}
+                          variant={isCurrentActivityType(activityType.name) ? "destructive" : "outline"}
+                          size="sm"
+                          className="shrink-0 text-xs px-3 h-8"
+                          data-testid={`button-end-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}
+                        >
+                          {loadingActivityName === activityType.name ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <>
+                              <Square className="mr-1 h-3 w-3" />
+                              Bitir
+                            </>
+                          )}
+                        </Button>
                       </div>
                     </div>
-                    <Badge variant={activity.endTime ? "secondary" : "default"}>
-                      {activity.durationMinutes ? `${activity.durationMinutes} dk` : "Devam ediyor"}
-                    </Badge>
-                  </div>
-                ))}
-                {activities.length === 0 && (
-                  <p className="text-center text-muted-foreground text-sm py-8">
-                    Henüz aktivite kaydı yok
-                  </p>
-                )}
-              </div>
+                  ))
+              )}
             </CardContent>
           </Card>
         </div>
 
+        {/* Recent Activities */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Son Aktiviteler</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {activities.slice(0, 6).map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                  data-testid={`activity-${activity.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-sm">{activity.type}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(activity.startTime)}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant={activity.endTime ? "secondary" : "default"}>
+                    {activity.durationMinutes ? `${activity.durationMinutes} dk` : "Devam"}
+                  </Badge>
+                </div>
+              ))}
+              {activities.length === 0 && (
+                <p className="text-center text-muted-foreground text-sm py-8 col-span-full">
+                  Henüz aktivite kaydı yok
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Daily Performance Measurement - Bottom */}
