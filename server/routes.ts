@@ -311,8 +311,9 @@ export async function registerRoutes(
   });
 
   // Serve uploaded files
-  app.use("/uploads", requireAuth, (req: any, res, next) => {
-    const filePath = path.join(uploadDir, req.path);
+  app.get("/uploads/:filename", requireAuth, (req: any, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(uploadDir, filename);
     if (fs.existsSync(filePath)) {
       res.sendFile(filePath);
     } else {
