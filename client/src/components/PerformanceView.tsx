@@ -4,7 +4,6 @@ import { Play, Square, Clock, MapPin, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -33,30 +32,35 @@ interface Shift {
   endLongitude: number | null;
 }
 
+const ACTIVITY_TYPES = [
+  { key: "customer", label: "Müşteri Görüşmesi" },
+  { key: "phone", label: "Telefon Görüşmesi" },
+  { key: "vehicle", label: "Araç Teslimatı" },
+  { key: "other", label: "Diğer" },
+];
+
 export default function PerformanceView({ user }: PerformanceViewProps) {
   const { toast } = useToast();
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [shiftDuration, setShiftDuration] = useState(0);
-  const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
+  const [activeActivities, setActiveActivities] = useState<Record<string, Activity | null>>({
+    customer: null,
+    phone: null,
+    vehicle: null,
+    other: null,
+  });
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [selectedActivityType, setSelectedActivityType] = useState("");
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [loadingActivity, setLoadingActivity] = useState<string | null>(null);
   const [durations, setDurations] = useState({
     customer: "",
     phone: "",
     vehicle: "",
+    other: "",
   });
-
-  const activityTypes: Record<string, string> = {
-    "Müşteri yüz yüze görüşme": "customer",
-    "Müşteri telefonla görüşme": "phone",
-    "Araç teslimatı": "vehicle",
-    "Diğer": "other",
-  };
 
   useEffect(() => {
     fetchActiveShift();
-    fetchActiveActivity();
     fetchActivities();
   }, []);
 
@@ -92,20 +96,6 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
     }
   };
 
-  const fetchActiveActivity = async () => {
-    try {
-      const response = await fetch("/api/activities/active", {
-        credentials: "include",
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentActivity(data.activity);
-      }
-    } catch (error) {
-      console.error("Error fetching active activity:", error);
-    }
-  };
-
   const fetchActivities = async () => {
     try {
       const response = await fetch("/api/activities", {
@@ -114,6 +104,16 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
       if (response.ok) {
         const data = await response.json();
         setActivities(data.activities);
+        
+        // Check for any active activities and update state
+        const active = data.activities.find((a: Activity) => !a.endTime);
+        if (active) {
+          const activityKey = ACTIVITY_TYPES.find(t => t.label === active.type)?.key || "other";
+          setActiveActivities(prev => ({
+            ...prev,
+            [activityKey]: active,
+          }));
+        }
       }
     } catch (error) {
       console.error("Error fetching activities:", error);
@@ -248,33 +248,28 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
     }
   };
 
-  const handleStartActivity = async () => {
-    if (!selectedActivityType) {
-      toast({
-        title: "Hata",
-        description: "Lütfen bir aktivite tipi seçin",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleStartActivity = async (activityKey: string, activityLabel: string) => {
+    setLoadingActivity(activityKey);
     try {
       const response = await fetch("/api/activities/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          type: selectedActivityType,
+          type: activityLabel,
           shiftId: activeShift?.id || null,
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        setCurrentActivity(data.activity);
+        setActiveActivities(prev => ({
+          ...prev,
+          [activityKey]: data.activity,
+        }));
         toast({
           title: "Aktivite Başladı",
-          description: `${selectedActivityType} kaydediliyor`,
+          description: `${activityLabel} kaydediliyor`,
         });
       } else {
         const error = await response.json();
@@ -290,19 +285,24 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
         description: "Aktivite başlatılamadı",
         variant: "destructive",
       });
+    } finally {
+      setLoadingActivity(null);
     }
   };
 
-  const handleEndActivity = async () => {
+  const handleEndActivity = async (activityKey: string, activityLabel: string) => {
+    const currentActivity = activeActivities[activityKey];
+    
     if (!currentActivity) {
       toast({
         title: "Uyarı",
-        description: "Önce bir aktivite başlatmalısınız",
+        description: `Önce ${activityLabel} aktivitesini başlatmalısınız`,
         variant: "destructive",
       });
       return;
     }
 
+    setLoadingActivity(activityKey);
     try {
       const response = await fetch("/api/activities/end", {
         method: "POST",
@@ -315,26 +315,22 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
 
       if (response.ok) {
         const data = await response.json();
-        setCurrentActivity(null);
-        setSelectedActivityType("");
+        setActiveActivities(prev => ({
+          ...prev,
+          [activityKey]: null,
+        }));
         
         const durationMinutes = data.activity.durationMinutes || 0;
-        const durationKey = Object.entries(activityTypes).find(
-          ([key]) => key === data.activity.type
-        )?.[1] as keyof typeof durations;
-
-        if (durationKey && durationKey !== "other") {
-          setDurations((prev) => ({
-            ...prev,
-            [durationKey]: durationMinutes.toString(),
-          }));
-        }
+        setDurations(prev => ({
+          ...prev,
+          [activityKey]: durationMinutes.toString(),
+        }));
 
         await fetchActivities();
 
         toast({
           title: "Aktivite Tamamlandı",
-          description: `${currentActivity.type} - Süre: ${durationMinutes} dakika`,
+          description: `${activityLabel} - Süre: ${durationMinutes} dakika`,
         });
       } else {
         const error = await response.json();
@@ -350,6 +346,8 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
         description: "Aktivite bitirilemedi",
         variant: "destructive",
       });
+    } finally {
+      setLoadingActivity(null);
     }
   };
 
@@ -434,106 +432,82 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
             <CardHeader>
               <CardTitle>Aktivite Yönetimi</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Aktivite Ekle</Label>
-                  <Select
-                    value={currentActivity ? currentActivity.type : selectedActivityType}
-                    onValueChange={setSelectedActivityType}
-                    disabled={currentActivity !== null}
-                  >
-                    <SelectTrigger data-testid="select-activity-start" className="bg-white">
-                      <SelectValue placeholder="Aktivite seçin..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border shadow-lg z-50">
-                      {Object.keys(activityTypes).map((type) => (
-                        <SelectItem 
-                          key={type} 
-                          value={type} 
-                          className="bg-white hover:bg-slate-100"
-                          data-testid={`option-activity-${activityTypes[type]}`}
-                        >
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Start Activities Column */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-primary border-b pb-2">Başlat Aktiviteleri</h3>
+                  {ACTIVITY_TYPES.map((activity) => (
+                    <div key={`start-${activity.key}`} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <span className="text-sm font-medium">{activity.label}</span>
+                      <Button
+                        onClick={() => handleStartActivity(activity.key, activity.label)}
+                        disabled={loadingActivity === activity.key || activeActivities[activity.key] !== null}
+                        size="sm"
+                        className="min-w-[80px]"
+                        data-testid={`button-start-${activity.key}`}
+                      >
+                        {loadingActivity === activity.key ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : activeActivities[activity.key] ? (
+                          "Aktif"
+                        ) : (
+                          <>
+                            <Play className="mr-1 h-3 w-3" />
+                            Başlat
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ))}
                 </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleStartActivity}
-                    disabled={!selectedActivityType}
-                    className="flex-1"
-                    data-testid="button-start-activity"
-                  >
-                    <Play className="mr-2 h-4 w-4" />
-                    Başlat
-                  </Button>
-                  <Button
-                    onClick={handleEndActivity}
-                    variant="destructive"
-                    className="flex-1"
-                    data-testid="button-end-activity"
-                  >
-                    <Square className="mr-2 h-4 w-4" />
-                    Bitir
-                  </Button>
+                {/* End Activities Column */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-destructive border-b pb-2">Bitiş Aktiviteleri</h3>
+                  {ACTIVITY_TYPES.map((activity) => (
+                    <div key={`end-${activity.key}`} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <span className="text-sm font-medium">{activity.label}</span>
+                      <Button
+                        onClick={() => handleEndActivity(activity.key, activity.label)}
+                        disabled={loadingActivity === activity.key}
+                        variant="destructive"
+                        size="sm"
+                        className="min-w-[80px]"
+                        data-testid={`button-end-${activity.key}`}
+                      >
+                        {loadingActivity === activity.key ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Square className="mr-1 h-3 w-3" />
+                            Bitir
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-
-                {currentActivity && (
-                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm font-semibold text-blue-900" data-testid="text-active-activity">
-                      Aktif: {currentActivity.type}
-                    </p>
-                    <p className="text-xs text-blue-700">
-                      Başlangıç: {formatDate(currentActivity.startTime)}
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* Duration Inputs */}
-              <div className="border-t pt-4 space-y-4">
+              <div className="border-t mt-6 pt-4 space-y-4">
                 <h3 className="font-semibold">Aktivite Süreleri (Dakika)</h3>
-                <div className="grid gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="customer-duration">Müşteri Görüşme</Label>
-                    <Input
-                      id="customer-duration"
-                      data-testid="input-duration-customer"
-                      type="number"
-                      placeholder="0"
-                      className="bg-white"
-                      value={durations.customer}
-                      onChange={(e) => setDurations({ ...durations, customer: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone-duration">Telefon Görüşme</Label>
-                    <Input
-                      id="phone-duration"
-                      data-testid="input-duration-phone"
-                      type="number"
-                      placeholder="0"
-                      className="bg-white"
-                      value={durations.phone}
-                      onChange={(e) => setDurations({ ...durations, phone: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicle-duration">Araç Teslimatı</Label>
-                    <Input
-                      id="vehicle-duration"
-                      data-testid="input-duration-vehicle"
-                      type="number"
-                      placeholder="0"
-                      className="bg-white"
-                      value={durations.vehicle}
-                      onChange={(e) => setDurations({ ...durations, vehicle: e.target.value })}
-                    />
-                  </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {ACTIVITY_TYPES.map((activity) => (
+                    <div key={`duration-${activity.key}`} className="space-y-2">
+                      <Label htmlFor={`${activity.key}-duration`} className="text-xs">{activity.label}</Label>
+                      <Input
+                        id={`${activity.key}-duration`}
+                        data-testid={`input-duration-${activity.key}`}
+                        type="number"
+                        placeholder="0"
+                        className="bg-white"
+                        value={durations[activity.key as keyof typeof durations]}
+                        onChange={(e) => setDurations({ ...durations, [activity.key]: e.target.value })}
+                      />
+                    </div>
+                  ))}
                 </div>
                 <Button onClick={saveDurations} className="w-full" data-testid="button-save-durations">
                   Süreleri Kaydet
@@ -599,7 +573,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Vardiya Süresi</span>
+                  <span className="text-muted-foreground">Mesai Süresi</span>
                   <span className="font-semibold" data-testid="text-shift-time">{formatTime(shiftDuration)}</span>
                 </div>
               </div>
