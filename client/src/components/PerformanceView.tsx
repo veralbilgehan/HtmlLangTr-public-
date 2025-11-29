@@ -37,41 +37,21 @@ export default function PerformanceView() {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const [dailyStats, setDailyStats] = useState({
-    "Yüz yüze Müşteri görüşmesi": 125, // in minutes
-    "Telefondan müşteri görüşmesi": 45,
-    "Araç teslimatı": 90
+  const [durations, setDurations] = useState({
+    customer: "",
+    phone: "",
+    vehicle: ""
   });
 
-  const handleEndActivity = (type: string) => {
-    if (!newActivity.desc) {
-      toast({ title: "Hata", description: "Lütfen bir değerlendirme seçiniz.", variant: "destructive" });
-      return;
-    }
-    
-    const duration = Math.floor(Math.random() * 60) + 15; // Mock duration
-    
-    setActivities([
-      {
-        id: Date.now(),
-        type: type,
-        desc: newActivity.desc,
-        duration: `${Math.floor(duration / 60).toString().padStart(2, '0')}:${(duration % 60).toString().padStart(2, '0')}:00`,
-        points: 10
-      },
-      ...activities
-    ]);
-    
-    setDailyStats(prev => ({
-      ...prev,
-      [type]: (prev[type as keyof typeof prev] || 0) + duration
-    }));
-
-    setNewActivity({ type: "", desc: "" });
-    toast({ title: "Aktivite Tamamlandı", description: `${type} başarıyla kaydedildi.` });
+  const calculateTotal = () => {
+    const parseMinutes = (str: string) => {
+      const num = parseInt(str) || 0;
+      return num;
+    };
+    return parseMinutes(durations.customer) + parseMinutes(durations.phone) + parseMinutes(durations.vehicle);
   };
 
-  const formatDuration = (minutes: number) => {
+  const formatTotal = (minutes: number) => {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
     return `${h}s ${m}dk`;
@@ -148,65 +128,36 @@ export default function PerformanceView() {
             <CardTitle>Aktivite Yönetimi</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Değerlendirme Dropdown */}
-            <div className="space-y-2">
-              <Label>Değerlendirme Seçiniz</Label>
-              <Select 
-                value={newActivity.desc} 
-                onValueChange={(v) => setNewActivity({...newActivity, desc: v})}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Görüşme sonucu seçiniz..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Olumlu">Olumlu</SelectItem>
-                  <SelectItem value="Olumsuz">Olumsuz</SelectItem>
-                  <SelectItem value="Satış Gerçekleşti">Satış Gerçekleşti</SelectItem>
-                  <SelectItem value="Bilgi Verildi">Bilgi Verildi</SelectItem>
-                  <SelectItem value="Teklif Bekleniyor">Teklif Bekleniyor</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Action Buttons Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex flex-col gap-3 text-center hover:shadow-md transition-all">
-                <div className="font-medium text-blue-900">Yüz Yüze Görüşme</div>
-                <Button 
-                  onClick={() => handleEndActivity("Yüz yüze Müşteri görüşmesi")}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  Bitir
-                </Button>
-                <div className="text-xs text-blue-600 font-medium mt-1 pt-2 border-t border-blue-200">
-                  Günlük Süre: {formatDuration(dailyStats["Yüz yüze Müşteri görüşmesi"])}
-                </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Aktivite Başlat</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seçiniz" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="musteri_cezasi">Müşteri cezası</SelectItem>
+                    <SelectItem value="gorusme_araclari">Görüşme araçları</SelectItem>
+                    <SelectItem value="telefonla_gorusme">Telefonla görüşme</SelectItem>
+                    <SelectItem value="arac_teslimati">Araç teslimatı</SelectItem>
+                    <SelectItem value="diger">Diğer</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 flex flex-col gap-3 text-center hover:shadow-md transition-all">
-                <div className="font-medium text-purple-900">Telefon Görüşmesi</div>
-                <Button 
-                  onClick={() => handleEndActivity("Telefondan müşteri görüşmesi")}
-                  className="w-full bg-purple-600 hover:bg-purple-700"
-                >
-                  Bitir
-                </Button>
-                <div className="text-xs text-purple-600 font-medium mt-1 pt-2 border-t border-purple-200">
-                  Günlük Süre: {formatDuration(dailyStats["Telefondan müşteri görüşmesi"])}
-                </div>
-              </div>
-
-              <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 flex flex-col gap-3 text-center hover:shadow-md transition-all">
-                <div className="font-medium text-orange-900">Araç Teslimatı</div>
-                <Button 
-                  onClick={() => handleEndActivity("Araç teslimatı")}
-                  className="w-full bg-orange-600 hover:bg-orange-700"
-                >
-                  Bitir
-                </Button>
-                <div className="text-xs text-orange-600 font-medium mt-1 pt-2 border-t border-orange-200">
-                  Günlük Süre: {formatDuration(dailyStats["Araç teslimatı"])}
-                </div>
+              <div className="space-y-2">
+                <Label>Aktivite Bitir</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seçiniz" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="musteri_gorusmesi_bitir">Müşteri görüşmesi bitir</SelectItem>
+                    <SelectItem value="musteri_telefon_gorusmesi_bitir">Müşteri telefon görüşmesi bitir</SelectItem>
+                    <SelectItem value="arac_teslimati_bitir">Araç teslimatı bitir</SelectItem>
+                    <SelectItem value="diger_bitir">Diğer bitir</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>
@@ -214,7 +165,54 @@ export default function PerformanceView() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Bugünkü Aktiviteler</CardTitle>
+            <CardTitle>Aktivite Süreleri</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Müşteri görüşme süresi (dk)</Label>
+                <Input 
+                  type="number" 
+                  placeholder="0"
+                  value={durations.customer}
+                  onChange={(e) => setDurations({...durations, customer: e.target.value})}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Telefon görüşme süresi (dk)</Label>
+                <Input 
+                  type="number" 
+                  placeholder="0"
+                  value={durations.phone}
+                  onChange={(e) => setDurations({...durations, phone: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Araç teslimat süresi (dk)</Label>
+                <Input 
+                  type="number" 
+                  placeholder="0"
+                  value={durations.vehicle}
+                  onChange={(e) => setDurations({...durations, vehicle: e.target.value})}
+                />
+              </div>
+
+              <div className="pt-4 mt-4 border-t">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-lg">Genel Toplam</span>
+                  <span className="font-bold text-xl text-primary">{formatTotal(calculateTotal())}</span>
+                </div>
+                <p className="text-xs text-muted-foreground text-right mt-1">Performans Süresi</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
