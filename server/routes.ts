@@ -116,6 +116,7 @@ export async function registerRoutes(
   app.post("/api/shifts/start", requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      const { latitude, longitude } = req.body;
       
       // Check if there's already an active shift
       const activeShift = await storage.getActiveShift(userId);
@@ -128,6 +129,10 @@ export async function registerRoutes(
         startTime: new Date(),
         endTime: null,
         durationSeconds: null,
+        startLatitude: latitude || null,
+        startLongitude: longitude || null,
+        endLatitude: null,
+        endLongitude: null,
       });
 
       res.json({ shift });
@@ -140,6 +145,7 @@ export async function registerRoutes(
   app.post("/api/shifts/end", requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      const { latitude, longitude } = req.body;
       
       const activeShift = await storage.getActiveShift(userId);
       if (!activeShift) {
@@ -152,6 +158,8 @@ export async function registerRoutes(
       const shift = await storage.updateShift(activeShift.id, {
         endTime,
         durationSeconds,
+        endLatitude: latitude || null,
+        endLongitude: longitude || null,
       });
 
       res.json({ shift });

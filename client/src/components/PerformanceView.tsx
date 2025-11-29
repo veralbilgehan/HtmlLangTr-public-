@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Square, Clock } from "lucide-react";
+import { Play, Square, Clock, MapPin, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,10 @@ interface Shift {
   startTime: string;
   endTime: string | null;
   durationSeconds: number | null;
+  startLatitude: number | null;
+  startLongitude: number | null;
+  endLatitude: number | null;
+  endLongitude: number | null;
 }
 
 export default function PerformanceView({ user }: PerformanceViewProps) {
@@ -36,13 +40,14 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [selectedActivityType, setSelectedActivityType] = useState("");
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [durations, setDurations] = useState({
     customer: "",
     phone: "",
     vehicle: "",
   });
 
-  const activityTypes = {
+  const activityTypes: Record<string, string> = {
     "Müşteri yüz yüze görüşme": "customer",
     "Müşteri telefonla görüşme": "phone",
     "Araç teslimatı": "vehicle",
@@ -122,19 +127,66 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
     return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
+  const getLocation = (): Promise<{ latitude: number; longitude: number }> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Konum servisi desteklenmiyor"));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          let message = "Konum alınamadı";
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              message = "Konum izni reddedildi";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              message = "Konum bilgisi mevcut değil";
+              break;
+            case error.TIMEOUT:
+              message = "Konum isteği zaman aşımına uğradı";
+              break;
+          }
+          reject(new Error(message));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
+      );
+    });
+  };
+
   const handleStartShift = async () => {
+    setIsLoadingLocation(true);
     try {
+      const location = await getLocation();
+      
       const response = await fetch("/api/shifts/start", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
+        body: JSON.stringify({
+          latitude: location.latitude,
+          longitude: location.longitude,
+        }),
       });
+      
       if (response.ok) {
         const data = await response.json();
         setActiveShift(data.shift);
         setShiftDuration(0);
         toast({
           title: "Vardiya Başladı",
-          description: "Çalışma süreniz kayıt altına alınıyor.",
+          description: `Konum: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`,
         });
       } else {
         const error = await response.json();
@@ -144,27 +196,38 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Hata",
-        description: "Vardiya başlatılamadı",
+        description: error.message || "Vardiya başlatılamadı",
         variant: "destructive",
       });
+    } finally {
+      setIsLoadingLocation(false);
     }
   };
 
   const handleEndShift = async () => {
+    setIsLoadingLocation(true);
     try {
+      const location = await getLocation();
+      
       const response = await fetch("/api/shifts/end", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
+        body: JSON.stringify({
+          latitude: location.latitude,
+          longitude: location.longitude,
+        }),
       });
+      
       if (response.ok) {
         const data = await response.json();
         setActiveShift(null);
         toast({
           title: "Vardiya Bitti",
-          description: `Toplam çalışma süresi: ${formatTime(data.shift.durationSeconds)}`,
+          description: `Süre: ${formatTime(data.shift.durationSeconds)} - Konum: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`,
         });
       } else {
         const error = await response.json();
@@ -174,12 +237,14 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Hata",
-        description: "Vardiya bitirilemedi",
+        description: error.message || "Vardiya bitirilemedi",
         variant: "destructive",
       });
+    } finally {
+      setIsLoadingLocation(false);
     }
   };
 
@@ -246,7 +311,6 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
         setCurrentActivity(null);
         setSelectedActivityType("");
         
-        // Auto-populate duration based on activity type
         const durationMinutes = data.activity.durationMinutes || 0;
         const durationKey = Object.entries(activityTypes).find(
           ([key]) => key === data.activity.type
@@ -299,6 +363,11 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
     });
   };
 
+  const formatCoordinates = (lat: number | null, lng: number | null) => {
+    if (lat === null || lng === null) return "Konum yok";
+    return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  };
+
   return (
     <div className="space-y-6">
       {/* Shift Controls */}
@@ -315,14 +384,26 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
               <p className="text-sm text-muted-foreground" data-testid="text-shift-duration">
                 Toplam Süre: {formatTime(shiftDuration)}
               </p>
+              {activeShift && activeShift.startLatitude && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                  <MapPin className="h-3 w-3" />
+                  Başlangıç: {formatCoordinates(activeShift.startLatitude, activeShift.startLongitude)}
+                </p>
+              )}
             </div>
             <Button
               onClick={activeShift && !activeShift.endTime ? handleEndShift : handleStartShift}
               variant={activeShift && !activeShift.endTime ? "destructive" : "default"}
               size="lg"
+              disabled={isLoadingLocation}
               data-testid={activeShift && !activeShift.endTime ? "button-end-shift" : "button-start-shift"}
             >
-              {activeShift && !activeShift.endTime ? (
+              {isLoadingLocation ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Konum Alınıyor...
+                </>
+              ) : activeShift && !activeShift.endTime ? (
                 <>
                   <Square className="mr-2 h-5 w-5" />
                   Vardiya Bitir
@@ -355,12 +436,17 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                     onValueChange={setSelectedActivityType}
                     disabled={currentActivity !== null}
                   >
-                    <SelectTrigger data-testid="select-activity-start">
+                    <SelectTrigger data-testid="select-activity-start" className="bg-white">
                       <SelectValue placeholder="Aktivite seçin..." />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white border shadow-lg z-50">
                       {Object.keys(activityTypes).map((type) => (
-                        <SelectItem key={type} value={type} data-testid={`option-activity-${activityTypes[type as keyof typeof activityTypes]}`}>
+                        <SelectItem 
+                          key={type} 
+                          value={type} 
+                          className="bg-white hover:bg-slate-100"
+                          data-testid={`option-activity-${activityTypes[type]}`}
+                        >
                           {type}
                         </SelectItem>
                       ))}
@@ -413,6 +499,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                       data-testid="input-duration-customer"
                       type="number"
                       placeholder="0"
+                      className="bg-white"
                       value={durations.customer}
                       onChange={(e) => setDurations({ ...durations, customer: e.target.value })}
                     />
@@ -424,6 +511,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                       data-testid="input-duration-phone"
                       type="number"
                       placeholder="0"
+                      className="bg-white"
                       value={durations.phone}
                       onChange={(e) => setDurations({ ...durations, phone: e.target.value })}
                     />
@@ -435,6 +523,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                       data-testid="input-duration-vehicle"
                       type="number"
                       placeholder="0"
+                      className="bg-white"
                       value={durations.vehicle}
                       onChange={(e) => setDurations({ ...durations, vehicle: e.target.value })}
                     />

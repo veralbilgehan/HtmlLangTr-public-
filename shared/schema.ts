@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -23,6 +23,10 @@ export const shifts = pgTable("shifts", {
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time"),
   durationSeconds: integer("duration_seconds"),
+  startLatitude: doublePrecision("start_latitude"),
+  startLongitude: doublePrecision("start_longitude"),
+  endLatitude: doublePrecision("end_latitude"),
+  endLongitude: doublePrecision("end_longitude"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
