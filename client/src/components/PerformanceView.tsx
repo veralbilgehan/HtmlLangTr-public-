@@ -294,7 +294,14 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
   };
 
   const handleEndActivity = async () => {
-    if (!currentActivity) return;
+    if (!currentActivity) {
+      toast({
+        title: "Uyarı",
+        description: "Önce bir aktivite başlatmalısınız",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const response = await fetch("/api/activities/end", {
