@@ -2,13 +2,16 @@ import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, Activity, MessageSquare } from "lucide-react";
+import { LogOut, LayoutDashboard, Activity, MessageSquare, Settings, Users, Building2 } from "lucide-react";
 import DashboardHome from "@/components/DashboardHome";
 import PerformanceView from "@/components/PerformanceView";
 import ChatInterface from "@/components/ChatInterface";
+import UserManagement from "@/components/UserManagement";
+import CompanyManagement from "@/components/CompanyManagement";
+import ActivitySettings from "@/components/ActivitySettings";
 import { getCurrentUser, getCurrentCompany, logout, type User, type Company } from "@/lib/auth";
 
-type TabType = "dashboard" | "performance" | "chat";
+type TabType = "dashboard" | "performance" | "chat" | "users" | "settings" | "companies";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -55,6 +58,7 @@ export default function Dashboard() {
   };
 
   const isSuperAdmin = user.role === 'super_admin';
+  const isManager = user.role === 'manager' || isSuperAdmin;
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
@@ -131,6 +135,49 @@ export default function Dashboard() {
           >
             <MessageSquare className="h-4 w-4 mr-2" /> Sohbet
           </button>
+          
+          {/* Manager/Admin tabs */}
+          {isManager && (
+            <button
+              onClick={() => setActiveTab("users")}
+              data-testid="tab-users"
+              className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
+                activeTab === "users" 
+                  ? "border-primary text-primary bg-blue-50/50" 
+                  : "border-transparent text-muted-foreground hover:bg-slate-50"
+              }`}
+            >
+              <Users className="h-4 w-4 mr-2" /> Kullanıcılar
+            </button>
+          )}
+          
+          {isSuperAdmin && (
+            <button
+              onClick={() => setActiveTab("companies")}
+              data-testid="tab-companies"
+              className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
+                activeTab === "companies" 
+                  ? "border-primary text-primary bg-blue-50/50" 
+                  : "border-transparent text-muted-foreground hover:bg-slate-50"
+              }`}
+            >
+              <Building2 className="h-4 w-4 mr-2" /> Şirketler
+            </button>
+          )}
+          
+          {isManager && (
+            <button
+              onClick={() => setActiveTab("settings")}
+              data-testid="tab-settings"
+              className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
+                activeTab === "settings" 
+                  ? "border-primary text-primary bg-blue-50/50" 
+                  : "border-transparent text-muted-foreground hover:bg-slate-50"
+              }`}
+            >
+              <Settings className="h-4 w-4 mr-2" /> Ayarlar
+            </button>
+          )}
         </nav>
 
         {/* Content */}
@@ -138,6 +185,9 @@ export default function Dashboard() {
           {activeTab === "dashboard" && <DashboardHome user={user} />}
           {activeTab === "performance" && <PerformanceView user={user} />}
           {activeTab === "chat" && <ChatInterface user={user} />}
+          {activeTab === "users" && isManager && <UserManagement user={user} />}
+          {activeTab === "companies" && isSuperAdmin && <CompanyManagement user={user} />}
+          {activeTab === "settings" && isManager && <ActivitySettings user={user} />}
         </main>
       </div>
     </div>
