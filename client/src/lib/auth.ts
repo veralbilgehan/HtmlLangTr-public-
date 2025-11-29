@@ -1,3 +1,8 @@
+export interface Company {
+  id: string;
+  name: string;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -5,9 +10,15 @@ export interface User {
   role: string;
   department: string | null;
   avatar: string | null;
+  companyId: string | null;
 }
 
-export async function login(username: string, password: string): Promise<User> {
+export interface AuthState {
+  user: User;
+  company: Company | null;
+}
+
+export async function login(username: string, password: string): Promise<AuthState> {
   const response = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -22,7 +33,10 @@ export async function login(username: string, password: string): Promise<User> {
 
   const data = await response.json();
   localStorage.setItem("user", JSON.stringify(data.user));
-  return data.user;
+  if (data.company) {
+    localStorage.setItem("company", JSON.stringify(data.company));
+  }
+  return { user: data.user, company: data.company };
 }
 
 export async function logout(): Promise<void> {
@@ -31,6 +45,7 @@ export async function logout(): Promise<void> {
     credentials: "include",
   });
   localStorage.removeItem("user");
+  localStorage.removeItem("company");
 }
 
 export function getCurrentUser(): User | null {
@@ -38,7 +53,12 @@ export function getCurrentUser(): User | null {
   return userStr ? JSON.parse(userStr) : null;
 }
 
-export async function checkAuth(): Promise<User | null> {
+export function getCurrentCompany(): Company | null {
+  const companyStr = localStorage.getItem("company");
+  return companyStr ? JSON.parse(companyStr) : null;
+}
+
+export async function checkAuth(): Promise<AuthState | null> {
   try {
     const response = await fetch("/api/auth/me", {
       credentials: "include",
@@ -46,14 +66,19 @@ export async function checkAuth(): Promise<User | null> {
 
     if (!response.ok) {
       localStorage.removeItem("user");
+      localStorage.removeItem("company");
       return null;
     }
 
     const data = await response.json();
     localStorage.setItem("user", JSON.stringify(data.user));
-    return data.user;
+    if (data.company) {
+      localStorage.setItem("company", JSON.stringify(data.company));
+    }
+    return { user: data.user, company: data.company };
   } catch (error) {
     localStorage.removeItem("user");
+    localStorage.removeItem("company");
     return null;
   }
 }

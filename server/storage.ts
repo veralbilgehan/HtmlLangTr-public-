@@ -1,18 +1,37 @@
 import { 
-  users, shifts, activities, messages,
+  users, shifts, activities, messages, companies, activityTypes, salesRecords,
   type User, type InsertUser,
   type Shift, type InsertShift,
   type Activity, type InsertActivity,
-  type Message, type InsertMessage
+  type Message, type InsertMessage,
+  type Company, type InsertCompany,
+  type ActivityType, type InsertActivityType,
+  type SalesRecord, type InsertSalesRecord
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, isNull } from "drizzle-orm";
 
 export interface IStorage {
+  // Companies
+  getCompany(id: string): Promise<Company | undefined>;
+  getAllCompanies(): Promise<Company[]>;
+  createCompany(company: InsertCompany): Promise<Company>;
+  updateCompany(id: string, updates: Partial<Company>): Promise<Company | undefined>;
+
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
+  getUsersByCompany(companyId: string): Promise<User[]>;
+  
+  // Activity Types
+  getActivityType(id: string): Promise<ActivityType | undefined>;
+  getActivityTypesByCompany(companyId: string): Promise<ActivityType[]>;
+  getDefaultActivityTypes(): Promise<ActivityType[]>;
+  createActivityType(activityType: InsertActivityType): Promise<ActivityType>;
+  updateActivityType(id: string, updates: Partial<ActivityType>): Promise<ActivityType | undefined>;
   
   // Shifts
   createShift(shift: InsertShift): Promise<Shift>;
@@ -26,15 +45,43 @@ export interface IStorage {
   getActiveActivity(userId: string): Promise<Activity | undefined>;
   getUserActivities(userId: string): Promise<Activity[]>;
   
+  // Sales Records
+  createSalesRecord(record: InsertSalesRecord): Promise<SalesRecord>;
+  getUserSalesRecords(userId: string): Promise<SalesRecord[]>;
+  getCompanySalesRecords(companyId: string): Promise<SalesRecord[]>;
+  
   // Messages
   createMessage(message: InsertMessage): Promise<Message>;
   markMessageAsRead(id: string): Promise<void>;
   getUserMessages(userId: string): Promise<Message[]>;
   getConversation(user1Id: string, user2Id: string): Promise<Message[]>;
-  getAllUsers(): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
+  // Companies
+  async getCompany(id: string): Promise<Company | undefined> {
+    const [company] = await db.select().from(companies).where(eq(companies.id, id));
+    return company || undefined;
+  }
+
+  async getAllCompanies(): Promise<Company[]> {
+    return await db.select().from(companies).orderBy(companies.name);
+  }
+
+  async createCompany(insertCompany: InsertCompany): Promise<Company> {
+    const [company] = await db.insert(companies).values(insertCompany).returning();
+    return company;
+  }
+
+  async updateCompany(id: string, updates: Partial<Company>): Promise<Company | undefined> {
+    const [company] = await db
+      .update(companies)
+      .set(updates)
+      .where(eq(companies.id, id))
+      .returning();
+    return company || undefined;
+  }
+
   // Users
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -51,8 +98,57 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
+  }
+
+  async getUsersByCompany(companyId: string): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.companyId, companyId));
+  }
+
+  // Activity Types
+  async getActivityType(id: string): Promise<ActivityType | undefined> {
+    const [activityType] = await db.select().from(activityTypes).where(eq(activityTypes.id, id));
+    return activityType || undefined;
+  }
+
+  async getActivityTypesByCompany(companyId: string): Promise<ActivityType[]> {
+    return await db
+      .select()
+      .from(activityTypes)
+      .where(or(eq(activityTypes.companyId, companyId), eq(activityTypes.isDefault, true)))
+      .orderBy(activityTypes.name);
+  }
+
+  async getDefaultActivityTypes(): Promise<ActivityType[]> {
+    return await db
+      .select()
+      .from(activityTypes)
+      .where(eq(activityTypes.isDefault, true))
+      .orderBy(activityTypes.name);
+  }
+
+  async createActivityType(insertActivityType: InsertActivityType): Promise<ActivityType> {
+    const [activityType] = await db.insert(activityTypes).values(insertActivityType).returning();
+    return activityType;
+  }
+
+  async updateActivityType(id: string, updates: Partial<ActivityType>): Promise<ActivityType | undefined> {
+    const [activityType] = await db
+      .update(activityTypes)
+      .set(updates)
+      .where(eq(activityTypes.id, id))
+      .returning();
+    return activityType || undefined;
   }
 
   // Shifts
@@ -119,6 +215,28 @@ export class DatabaseStorage implements IStorage {
       .from(activities)
       .where(eq(activities.userId, userId))
       .orderBy(desc(activities.createdAt));
+  }
+
+  // Sales Records
+  async createSalesRecord(insertRecord: InsertSalesRecord): Promise<SalesRecord> {
+    const [record] = await db.insert(salesRecords).values(insertRecord).returning();
+    return record;
+  }
+
+  async getUserSalesRecords(userId: string): Promise<SalesRecord[]> {
+    return await db
+      .select()
+      .from(salesRecords)
+      .where(eq(salesRecords.userId, userId))
+      .orderBy(desc(salesRecords.createdAt));
+  }
+
+  async getCompanySalesRecords(companyId: string): Promise<SalesRecord[]> {
+    return await db
+      .select()
+      .from(salesRecords)
+      .where(eq(salesRecords.companyId, companyId))
+      .orderBy(desc(salesRecords.createdAt));
   }
 
   // Messages

@@ -2,24 +2,29 @@ import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, Activity, MessageSquare } from "lucide-react";
+import { LogOut, LayoutDashboard, Activity, MessageSquare, Settings, Users, Building2 } from "lucide-react";
 import DashboardHome from "@/components/DashboardHome";
 import PerformanceView from "@/components/PerformanceView";
 import ChatInterface from "@/components/ChatInterface";
-import { getCurrentUser, logout, type User } from "@/lib/auth";
+import { getCurrentUser, getCurrentCompany, logout, type User, type Company } from "@/lib/auth";
+
+type TabType = "dashboard" | "performance" | "chat" | "users" | "settings" | "companies";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "performance" | "chat">("dashboard");
+  const [activeTab, setActiveTab] = useState<TabType>("dashboard");
   const [user, setUser] = useState<User | null>(null);
+  const [company, setCompany] = useState<Company | null>(null);
 
   useEffect(() => {
     const currentUser = getCurrentUser();
+    const currentCompany = getCurrentCompany();
     if (!currentUser) {
       setLocation("/");
       return;
     }
     setUser(currentUser);
+    setCompany(currentCompany);
   }, [setLocation]);
 
   const handleLogout = async () => {
@@ -40,15 +45,29 @@ export default function Dashboard() {
       .substring(0, 2);
   };
 
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'super_admin': return 'Süper Admin';
+      case 'manager': return 'Yönetici';
+      case 'employee': return 'Çalışan';
+      default: return role;
+    }
+  };
+
+  const isSuperAdmin = user.role === 'super_admin';
+  const isManager = user.role === 'manager' || isSuperAdmin;
+
   return (
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden min-h-[85vh] flex flex-col">
         {/* Header */}
         <header className="bg-primary text-primary-foreground p-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Şirket Portalı</h1>
+            <h1 className="text-2xl font-bold" data-testid="text-company-name">
+              {company?.name || (isSuperAdmin ? "Sistem Yönetimi" : "Şirket Portalı")}
+            </h1>
             <p className="text-primary-foreground/80 text-sm" data-testid="text-welcome">
-              Hoşgeldiniz, {user.fullName}
+              {user.fullName} - {getRoleLabel(user.role)}
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -63,7 +82,7 @@ export default function Dashboard() {
               </Avatar>
               <div className="text-sm">
                 <p className="font-medium leading-none" data-testid="text-fullname">{user.fullName}</p>
-                <p className="text-xs opacity-80" data-testid="text-department">{user.department || "Departman"}</p>
+                <p className="text-xs opacity-80" data-testid="text-department">{user.department || getRoleLabel(user.role)}</p>
               </div>
             </div>
             <Button 
@@ -79,11 +98,11 @@ export default function Dashboard() {
         </header>
 
         {/* Navigation */}
-        <nav className="flex border-b bg-white sticky top-0 z-10">
+        <nav className="flex border-b bg-white sticky top-0 z-10 overflow-x-auto">
           <button
             onClick={() => setActiveTab("dashboard")}
             data-testid="tab-dashboard"
-            className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 ${
+            className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
               activeTab === "dashboard" 
                 ? "border-primary text-primary bg-blue-50/50" 
                 : "border-transparent text-muted-foreground hover:bg-slate-50"
@@ -94,7 +113,7 @@ export default function Dashboard() {
           <button
             onClick={() => setActiveTab("performance")}
             data-testid="tab-performance"
-            className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 ${
+            className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
               activeTab === "performance" 
                 ? "border-primary text-primary bg-blue-50/50" 
                 : "border-transparent text-muted-foreground hover:bg-slate-50"
@@ -105,7 +124,7 @@ export default function Dashboard() {
           <button
             onClick={() => setActiveTab("chat")}
             data-testid="tab-chat"
-            className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 ${
+            className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
               activeTab === "chat" 
                 ? "border-primary text-primary bg-blue-50/50" 
                 : "border-transparent text-muted-foreground hover:bg-slate-50"
@@ -113,6 +132,49 @@ export default function Dashboard() {
           >
             <MessageSquare className="h-4 w-4 mr-2" /> Sohbet
           </button>
+          
+          {/* Manager/Admin tabs */}
+          {isManager && (
+            <button
+              onClick={() => setActiveTab("users")}
+              data-testid="tab-users"
+              className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
+                activeTab === "users" 
+                  ? "border-primary text-primary bg-blue-50/50" 
+                  : "border-transparent text-muted-foreground hover:bg-slate-50"
+              }`}
+            >
+              <Users className="h-4 w-4 mr-2" /> Kullanıcılar
+            </button>
+          )}
+          
+          {isSuperAdmin && (
+            <button
+              onClick={() => setActiveTab("companies")}
+              data-testid="tab-companies"
+              className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
+                activeTab === "companies" 
+                  ? "border-primary text-primary bg-blue-50/50" 
+                  : "border-transparent text-muted-foreground hover:bg-slate-50"
+              }`}
+            >
+              <Building2 className="h-4 w-4 mr-2" /> Şirketler
+            </button>
+          )}
+          
+          {isManager && (
+            <button
+              onClick={() => setActiveTab("settings")}
+              data-testid="tab-settings"
+              className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
+                activeTab === "settings" 
+                  ? "border-primary text-primary bg-blue-50/50" 
+                  : "border-transparent text-muted-foreground hover:bg-slate-50"
+              }`}
+            >
+              <Settings className="h-4 w-4 mr-2" /> Ayarlar
+            </button>
+          )}
         </nav>
 
         {/* Content */}
@@ -120,6 +182,27 @@ export default function Dashboard() {
           {activeTab === "dashboard" && <DashboardHome user={user} />}
           {activeTab === "performance" && <PerformanceView user={user} />}
           {activeTab === "chat" && <ChatInterface user={user} />}
+          {activeTab === "users" && isManager && (
+            <div className="text-center py-12">
+              <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h2 className="text-xl font-bold mb-2">Kullanıcı Yönetimi</h2>
+              <p className="text-muted-foreground">Bu bölüm yakında eklenecek</p>
+            </div>
+          )}
+          {activeTab === "companies" && isSuperAdmin && (
+            <div className="text-center py-12">
+              <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h2 className="text-xl font-bold mb-2">Şirket Yönetimi</h2>
+              <p className="text-muted-foreground">Bu bölüm yakında eklenecek</p>
+            </div>
+          )}
+          {activeTab === "settings" && isManager && (
+            <div className="text-center py-12">
+              <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h2 className="text-xl font-bold mb-2">Puan Ayarları</h2>
+              <p className="text-muted-foreground">Bu bölüm yakında eklenecek</p>
+            </div>
+          )}
         </main>
       </div>
     </div>

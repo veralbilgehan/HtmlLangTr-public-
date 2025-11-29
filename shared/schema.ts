@@ -3,12 +3,26 @@ import { pgTable, text, varchar, timestamp, integer, boolean, doublePrecision } 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const companies = pgTable("companies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  address: text("address"),
+  phone: text("phone"),
+  email: text("email"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCompanySchema = createInsertSchema(companies).omit({ id: true, createdAt: true });
+export type InsertCompany = z.infer<typeof insertCompanySchema>;
+export type Company = typeof companies.$inferSelect;
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   fullName: text("full_name").notNull(),
   role: text("role").notNull().default('employee'),
+  companyId: varchar("company_id").references(() => companies.id),
   department: text("department"),
   avatar: text("avatar"),
 });
@@ -17,9 +31,24 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+export const activityTypes = pgTable("activity_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").references(() => companies.id),
+  name: text("name").notNull(),
+  category: text("category").notNull().default('activity'),
+  points: integer("points").notNull().default(1),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertActivityTypeSchema = createInsertSchema(activityTypes).omit({ id: true, createdAt: true });
+export type InsertActivityType = z.infer<typeof insertActivityTypeSchema>;
+export type ActivityType = typeof activityTypes.$inferSelect;
+
 export const shifts = pgTable("shifts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
+  companyId: varchar("company_id").references(() => companies.id),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time"),
   durationSeconds: integer("duration_seconds"),
@@ -37,7 +66,9 @@ export type Shift = typeof shifts.$inferSelect;
 export const activities = pgTable("activities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
+  companyId: varchar("company_id").references(() => companies.id),
   shiftId: varchar("shift_id").references(() => shifts.id),
+  activityTypeId: varchar("activity_type_id").references(() => activityTypes.id),
   type: text("type").notNull(),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time"),
@@ -50,10 +81,27 @@ export const insertActivitySchema = createInsertSchema(activities).omit({ id: tr
 export type InsertActivity = z.infer<typeof insertActivitySchema>;
 export type Activity = typeof activities.$inferSelect;
 
+export const salesRecords = pgTable("sales_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  companyId: varchar("company_id").references(() => companies.id),
+  shiftId: varchar("shift_id").references(() => shifts.id),
+  activityTypeId: varchar("activity_type_id").references(() => activityTypes.id),
+  type: text("type").notNull(),
+  quantity: integer("quantity").default(1),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSalesRecordSchema = createInsertSchema(salesRecords).omit({ id: true, createdAt: true });
+export type InsertSalesRecord = z.infer<typeof insertSalesRecordSchema>;
+export type SalesRecord = typeof salesRecords.$inferSelect;
+
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   senderId: varchar("sender_id").notNull().references(() => users.id),
   recipientId: varchar("recipient_id").notNull().references(() => users.id),
+  companyId: varchar("company_id").references(() => companies.id),
   content: text("content"),
   fileUrl: text("file_url"),
   fileName: text("file_name"),

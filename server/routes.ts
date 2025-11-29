@@ -5,7 +5,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { type User, insertUserSchema, insertShiftSchema, insertActivitySchema, insertMessageSchema } from "@shared/schema";
+import { type User, insertUserSchema, insertShiftSchema, insertActivitySchema, insertMessageSchema, insertCompanySchema, insertActivityTypeSchema, insertSalesRecordSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -131,10 +131,16 @@ export async function registerRoutes(
       if (!user) {
         return res.status(401).json({ message: info.message || "Giriş başarısız" });
       }
-      req.login(user, (err) => {
+      req.login(user, async (err) => {
         if (err) {
           return res.status(500).json({ message: "Giriş hatası" });
         }
+        
+        let company = null;
+        if (user.companyId) {
+          company = await storage.getCompany(user.companyId);
+        }
+        
         return res.json({ 
           user: {
             id: user.id,
@@ -143,7 +149,12 @@ export async function registerRoutes(
             role: user.role,
             department: user.department,
             avatar: user.avatar,
-          }
+            companyId: user.companyId,
+          },
+          company: company ? {
+            id: company.id,
+            name: company.name,
+          } : null
         });
       });
     })(req, res, next);
@@ -155,8 +166,14 @@ export async function registerRoutes(
     });
   });
 
-  app.get("/api/auth/me", requireAuth, (req: any, res) => {
+  app.get("/api/auth/me", requireAuth, async (req: any, res) => {
     const user = req.user as User;
+    
+    let company = null;
+    if (user.companyId) {
+      company = await storage.getCompany(user.companyId);
+    }
+    
     res.json({
       user: {
         id: user.id,
@@ -165,8 +182,218 @@ export async function registerRoutes(
         role: user.role,
         department: user.department,
         avatar: user.avatar,
-      }
+        companyId: user.companyId,
+      },
+      company: company ? {
+        id: company.id,
+        name: company.name,
+      } : null
     });
+  });
+
+  // Role-based middleware
+  const requireSuperAdmin = (req: any, res: any, next: any) => {
+    if (req.user?.role !== 'super_admin') {
+      return res.status(403).json({ message: "Bu işlem için süper admin yetkisi gerekli" });
+    }
+    next();
+  };
+
+  const requireManager = (req: any, res: any, next: any) => {
+    if (!['super_admin', 'manager'].includes(req.user?.role)) {
+      return res.status(403).json({ message: "Bu işlem için yönetici yetkisi gerekli" });
+    }
+    next();
+  };
+
+  // Company routes
+  app.get("/api/companies", requireAuth, requireSuperAdmin, async (req: any, res) => {
+    try {
+      const companies = await storage.getAllCompanies();
+      res.json({ companies });
+    } catch (error) {
+      console.error("Get companies error:", error);
+      res.status(500).json({ message: "Şirketler alınamadı" });
+    }
+  });
+
+  app.post("/api/companies", requireAuth, requireSuperAdmin, async (req: any, res) => {
+    try {
+      const parsed = insertCompanySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Geçersiz şirket bilgisi" });
+      }
+      const company = await storage.createCompany(parsed.data);
+      res.json({ company });
+    } catch (error) {
+      console.error("Create company error:", error);
+      res.status(500).json({ message: "Şirket oluşturulamadı" });
+    }
+  });
+
+  // Activity Types routes
+  app.get("/api/activity-types", requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user as User;
+      let activityTypes;
+      
+      if (user.role === 'super_admin') {
+        activityTypes = await storage.getDefaultActivityTypes();
+      } else if (user.companyId) {
+        activityTypes = await storage.getActivityTypesByCompany(user.companyId);
+      } else {
+        activityTypes = await storage.getDefaultActivityTypes();
+      }
+      
+      res.json({ activityTypes });
+    } catch (error) {
+      console.error("Get activity types error:", error);
+      res.status(500).json({ message: "Aktivite türleri alınamadı" });
+    }
+  });
+
+  app.post("/api/activity-types", requireAuth, requireManager, async (req: any, res) => {
+    try {
+      const user = req.user as User;
+      const parsed = insertActivityTypeSchema.safeParse({
+        name: req.body.name,
+        category: req.body.category || 'activity',
+        points: req.body.points || 1,
+        companyId: user.role === 'super_admin' ? null : user.companyId,
+        isDefault: user.role === 'super_admin' ? (req.body.isDefault || false) : false,
+      });
+      
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Geçersiz aktivite türü bilgisi" });
+      }
+      
+      const activityType = await storage.createActivityType(parsed.data);
+      res.json({ activityType });
+    } catch (error) {
+      console.error("Create activity type error:", error);
+      res.status(500).json({ message: "Aktivite türü oluşturulamadı" });
+    }
+  });
+
+  app.put("/api/activity-types/:id", requireAuth, requireManager, async (req: any, res) => {
+    try {
+      const updates: any = {};
+      if (req.body.name !== undefined) updates.name = req.body.name;
+      if (req.body.points !== undefined) updates.points = req.body.points;
+      if (req.body.category !== undefined) updates.category = req.body.category;
+      
+      const activityType = await storage.updateActivityType(req.params.id, updates);
+      res.json({ activityType });
+    } catch (error) {
+      console.error("Update activity type error:", error);
+      res.status(500).json({ message: "Aktivite türü güncellenemedi" });
+    }
+  });
+
+  // User management routes (for managers)
+  app.get("/api/company/users", requireAuth, requireManager, async (req: any, res) => {
+    try {
+      const user = req.user as User;
+      
+      let users;
+      if (user.role === 'super_admin') {
+        users = await storage.getAllUsers();
+      } else if (user.companyId) {
+        users = await storage.getUsersByCompany(user.companyId);
+      } else {
+        return res.status(400).json({ message: "Şirket bilgisi bulunamadı" });
+      }
+      
+      const sanitizedUsers = users.map(u => ({
+        id: u.id,
+        username: u.username,
+        fullName: u.fullName,
+        role: u.role,
+        department: u.department,
+        avatar: u.avatar,
+        companyId: u.companyId,
+      }));
+      
+      res.json({ users: sanitizedUsers });
+    } catch (error) {
+      console.error("Get company users error:", error);
+      res.status(500).json({ message: "Kullanıcılar alınamadı" });
+    }
+  });
+
+  app.post("/api/company/users", requireAuth, requireManager, async (req: any, res) => {
+    try {
+      const manager = req.user as User;
+      
+      const parsed = insertUserSchema.safeParse({
+        username: req.body.username,
+        password: req.body.password,
+        fullName: req.body.fullName,
+        role: req.body.role || 'employee',
+        department: req.body.department || null,
+        avatar: req.body.avatar || null,
+        companyId: manager.role === 'super_admin' ? req.body.companyId : manager.companyId,
+      });
+      
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Geçersiz kullanıcı bilgisi" });
+      }
+      
+      const newUser = await storage.createUser(parsed.data);
+      
+      res.json({ 
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+          fullName: newUser.fullName,
+          role: newUser.role,
+          department: newUser.department,
+        }
+      });
+    } catch (error) {
+      console.error("Create user error:", error);
+      res.status(500).json({ message: "Kullanıcı oluşturulamadı" });
+    }
+  });
+
+  // Sales Records routes
+  app.get("/api/sales-records", requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user as User;
+      const records = await storage.getUserSalesRecords(user.id);
+      res.json({ records });
+    } catch (error) {
+      console.error("Get sales records error:", error);
+      res.status(500).json({ message: "Satış kayıtları alınamadı" });
+    }
+  });
+
+  app.post("/api/sales-records", requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user as User;
+      const activeShift = await storage.getActiveShift(user.id);
+      
+      const parsed = insertSalesRecordSchema.safeParse({
+        userId: user.id,
+        companyId: user.companyId,
+        shiftId: activeShift?.id || null,
+        type: req.body.type,
+        quantity: req.body.quantity || 1,
+        notes: req.body.notes || null,
+        activityTypeId: req.body.activityTypeId || null,
+      });
+      
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Geçersiz satış kaydı bilgisi" });
+      }
+      
+      const record = await storage.createSalesRecord(parsed.data);
+      
+      res.json({ record });
+    } catch (error) {
+      console.error("Create sales record error:", error);
+      res.status(500).json({ message: "Satış kaydı oluşturulamadı" });
+    }
   });
 
   // Shift routes
