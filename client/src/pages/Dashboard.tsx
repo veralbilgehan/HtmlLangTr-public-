@@ -109,17 +109,6 @@ export default function Dashboard() {
         {/* Navigation */}
         <nav className="flex border-b bg-white sticky top-0 z-10 overflow-x-auto">
           <button
-            onClick={() => setActiveTab("dashboard")}
-            data-testid="tab-dashboard"
-            className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
-              activeTab === "dashboard" 
-                ? "border-primary text-primary bg-blue-50/50" 
-                : "border-transparent text-muted-foreground hover:bg-slate-50"
-            }`}
-          >
-            <LayoutDashboard className="h-4 w-4 mr-2" /> Panel
-          </button>
-          <button
             onClick={() => setActiveTab("performance")}
             data-testid="tab-performance"
             className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
@@ -149,7 +138,7 @@ export default function Dashboard() {
                 <button
                   data-testid="dropdown-management"
                   className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
-                    activeTab === "users" || activeTab === "companies" || activeTab === "settings"
+                    activeTab === "dashboard" || activeTab === "users" || activeTab === "companies" || activeTab === "settings"
                       ? "border-primary text-primary bg-blue-50/50" 
                       : "border-transparent text-muted-foreground hover:bg-slate-50"
                   }`}
@@ -160,6 +149,13 @@ export default function Dashboard() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem 
+                  onClick={() => setActiveTab("dashboard")}
+                  data-testid="menu-dashboard"
+                  className={activeTab === "dashboard" ? "bg-blue-50 text-primary" : ""}
+                >
+                  <LayoutDashboard className="h-4 w-4 mr-2" /> Panel
+                </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setActiveTab("users")}
                   data-testid="menu-users"
