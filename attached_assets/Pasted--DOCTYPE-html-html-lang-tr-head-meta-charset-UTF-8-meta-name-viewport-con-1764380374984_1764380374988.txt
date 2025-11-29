@@ -1,0 +1,2371 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Şirket İçi Uygulama - Performans ve Sohbet Sistemi</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --info-color: #1abc9c;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        /* Giriş Ekranı Stilleri */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .login-form {
+            background-color: white;
+            padding: 40px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 450px;
+            max-width: 90%;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo h1 {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        
+        .logo p {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .login-tabs {
+            display: flex;
+            margin-bottom: 25px;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            border: 1px solid #ddd;
+        }
+        
+        .login-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            background-color: var(--light-color);
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+        
+        .login-tab.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .login-content {
+            display: block;
+        }
+        
+        .login-content.hidden {
+            display: none;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            transition: var(--transition);
+        }
+        
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 10px;
+        }
+        
+        .submit-btn:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .info-text {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .password-toggle {
+            position: relative;
+        }
+        
+        .password-toggle i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #777;
+        }
+        
+        .success-message {
+            background-color: var(--success-color);
+            color: white;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-top: 20px;
+            text-align: center;
+            display: none;
+            animation: slideIn 0.5s ease;
+        }
+        
+        .error-message {
+            background-color: var(--danger-color);
+            color: white;
+            padding: 10px;
+            border-radius: var(--border-radius);
+            margin-top: 10px;
+            text-align: center;
+            display: none;
+            animation: slideIn 0.5s ease;
+        }
+        
+        /* Ana Uygulama Stilleri */
+        .main-app {
+            display: none;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            min-height: 90vh;
+        }
+        
+        .app-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .app-header h1 {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: white;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .app-tabs {
+            display: flex;
+            background-color: white;
+            border-bottom: 1px solid #ddd;
+            overflow-x: auto;
+        }
+        
+        .app-tab {
+            flex: 1;
+            min-width: 120px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+        }
+        
+        .app-tab.active {
+            border-bottom-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .app-tab:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .app-content {
+            padding: 30px;
+            min-height: 500px;
+        }
+        
+        .app-section {
+            display: none;
+        }
+        
+        .app-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .section-header h2 {
+            font-size: 24px;
+            color: var(--dark-color);
+        }
+        
+        .section-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .btn-warning {
+            background-color: var(--warning-color);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .dashboard-card {
+            background-color: white;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            text-align: center;
+            transition: var(--transition);
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+        
+        .dashboard-card i {
+            font-size: 40px;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        
+        .dashboard-card h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: var(--dark-color);
+        }
+        
+        .dashboard-card p {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .dashboard-card.success {
+            border-left-color: var(--success-color);
+        }
+        
+        .dashboard-card.success i {
+            color: var(--success-color);
+        }
+        
+        .dashboard-card.warning {
+            border-left-color: var(--warning-color);
+        }
+        
+        .dashboard-card.warning i {
+            color: var(--warning-color);
+        }
+        
+        .dashboard-card.danger {
+            border-left-color: var(--danger-color);
+        }
+        
+        .dashboard-card.danger i {
+            color: var(--danger-color);
+        }
+        
+        .logout-btn {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .logout-btn:hover {
+            background-color: #c0392b;
+        }
+        
+        /* Sohbet Bölümü */
+        .chat-container {
+            display: flex;
+            height: 500px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+        
+        .chat-sidebar {
+            width: 30%;
+            background-color: #f5f5f5;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+        }
+        
+        .chat-main {
+            width: 70%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            padding: 15px;
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 500;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .message {
+            max-width: 70%;
+            padding: 12px 15px;
+            border-radius: 18px;
+            position: relative;
+        }
+        
+        .message.sent {
+            align-self: flex-end;
+            background-color: var(--primary-color);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .message.received {
+            align-self: flex-start;
+            background-color: #f1f1f1;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .message-time {
+            font-size: 12px;
+            margin-top: 5px;
+            opacity: 0.7;
+            text-align: right;
+        }
+        
+        .chat-input {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid #ddd;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            margin-right: 10px;
+        }
+        
+        .chat-input button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .user-list {
+            list-style: none;
+        }
+        
+        .user-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-item:hover {
+            background-color: #e9e9e9;
+        }
+        
+        .user-item.active {
+            background-color: #e1f0fa;
+        }
+        
+        .user-avatar-small {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        /* Dosya Paylaşımı Stilleri */
+        .file-share-container {
+            padding: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-share-btn {
+            background-color: var(--info-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .file-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .file-icon {
+            color: var(--primary-color);
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .file-action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--primary-color);
+        }
+        
+        .file-upload-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: var(--border-radius);
+        }
+        
+        .file-upload-info {
+            flex: 1;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .send-file-btn {
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        /* Performans Bölümü */
+        .performance-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .performance-card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 20px;
+        }
+        
+        .performance-card.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .performance-card h3 {
+            margin-bottom: 15px;
+            color: var(--dark-color);
+            font-size: 18px;
+        }
+        
+        .shift-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .shift-btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .shift-btn.start {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .shift-btn.end {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .shift-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .shift-info {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 15px;
+        }
+        
+        .shift-duration {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-top: 10px;
+        }
+        
+        .department-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .department-btn {
+            padding: 10px 15px;
+            background-color: #f1f1f1;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .department-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .activity-form {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .activity-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .activity-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-details {
+            flex: 1;
+        }
+        
+        .activity-points {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .activity-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .activity-timer {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .scoring-config {
+            margin-top: 20px;
+        }
+        
+        .scoring-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .scoring-item:last-child {
+            border-bottom: none;
+        }
+        
+        .scoring-input {
+            width: 80px;
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+        }
+        
+        /* Responsive Tasarım */
+        @media (max-width: 992px) {
+            .performance-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .chat-container {
+                flex-direction: column;
+                height: 600px;
+            }
+            
+            .chat-sidebar {
+                width: 100%;
+                height: 30%;
+            }
+            
+            .chat-main {
+                width: 100%;
+                height: 70%;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .section-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .login-form {
+                padding: 30px 20px;
+            }
+            
+            .logo h1 {
+                font-size: 24px;
+            }
+            
+            .app-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .app-content {
+                padding: 20px 15px;
+            }
+            
+            .shift-controls {
+                flex-direction: column;
+            }
+            
+            .department-selector {
+                flex-direction: column;
+            }
+            
+            .activity-controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Giriş Ekranı -->
+    <div class="login-container" id="login-screen">
+        <div class="login-form">
+            <div class="logo">
+                <h1><i class="fas fa-building"></i> Şirket İçi Uygulama</h1>
+                <p>Güvenli sohbet ve performans takip sistemi</p>
+            </div>
+            
+            <div class="login-tabs">
+                <div class="login-tab active" data-login-tab="company">Şirket Girişi</div>
+                <div class="login-tab" data-login-tab="user">Kullanıcı Girişi</div>
+            </div>
+            
+            <!-- Şirket Girişi Formu -->
+            <div id="company-login" class="login-content">
+                <div class="form-group">
+                    <label for="company-name"><i class="fas fa-building"></i> Şirket Adı</label>
+                    <input type="text" id="company-name" placeholder="Şirket adınızı girin">
+                </div>
+                <div class="form-group">
+                    <label for="admin-username"><i class="fas fa-user-cog"></i> Yönetici Kullanıcı Adı</label>
+                    <input type="text" id="admin-username" placeholder="Yönetici kullanıcı adı">
+                </div>
+                <div class="form-group password-toggle">
+                    <label for="admin-password"><i class="fas fa-key"></i> Yönetici Şifresi</label>
+                    <input type="password" id="admin-password" placeholder="Yönetici şifresi">
+                    <i class="fas fa-eye" id="toggle-admin-password"></i>
+                </div>
+                <button class="submit-btn" id="create-company">
+                    <i class="fas fa-plus-circle"></i> Şirket Oluştur
+                </button>
+                
+                <div class="info-text">
+                    <p>Şirketinizi oluşturarak sisteme kayıt olun.</p>
+                </div>
+            </div>
+            
+            <!-- Kullanıcı Girişi Formu -->
+            <div id="user-login" class="login-content hidden">
+                <div class="form-group">
+                    <label for="user-company"><i class="fas fa-building"></i> Şirket Seçin</label>
+                    <select id="user-company">
+                        <option value="">Şirket seçin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="user-username"><i class="fas fa-user"></i> Kullanıcı Adı</label>
+                    <input type="text" id="user-username" placeholder="Kullanıcı adınızı girin">
+                </div>
+                <div class="form-group password-toggle">
+                    <label for="user-password"><i class="fas fa-key"></i> Şifre</label>
+                    <input type="password" id="user-password" placeholder="Şifrenizi girin">
+                    <i class="fas fa-eye" id="toggle-user-password"></i>
+                </div>
+                <button class="submit-btn" id="user-login-btn">
+                    <i class="fas fa-sign-in-alt"></i> Giriş Yap
+                </button>
+                
+                <div class="info-text">
+                    <p>Mevcut bir şirkete bağlı kullanıcı hesabınızla giriş yapın.</p>
+                </div>
+            </div>
+            
+            <div class="success-message" id="success-message">
+                Giriş başarılı! Ana sayfaya yönlendiriliyorsunuz...
+            </div>
+            
+            <div class="error-message" id="error-message">
+                Hata! Lütfen bilgilerinizi kontrol edin.
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ana Uygulama -->
+    <div class="main-app" id="main-app">
+        <div class="app-header">
+            <h1><i class="fas fa-building"></i> <span id="current-company">Şirket Adı</span></h1>
+            <div class="user-info">
+                <div class="user-avatar" id="current-user-avatar">K</div>
+                <div>
+                    <div id="current-user">Kullanıcı Adı</div>
+                    <div id="user-role" style="font-size: 12px; opacity: 0.8;">Kullanıcı</div>
+                    <button class="logout-btn" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Çıkış Yap</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="app-tabs">
+            <div class="app-tab active" data-tab="dashboard">Dashboard</div>
+            <div class="app-tab" data-tab="chat">Sohbet</div>
+            <div class="app-tab" data-tab="performance">Performans</div>
+            <div class="app-tab" data-tab="settings">Ayarlar</div>
+        </div>
+        
+        <div class="app-content">
+            <!-- Dashboard -->
+            <div class="app-section active" id="dashboard-section">
+                <div class="section-header">
+                    <h2>Hoş Geldiniz!</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-primary" id="refresh-dashboard"><i class="fas fa-sync-alt"></i> Yenile</button>
+                        <button class="btn btn-success" id="download-report"><i class="fas fa-download"></i> Rapor İndir</button>
+                    </div>
+                </div>
+                <p>Şirket içi sohbet ve performans takip sistemine hoş geldiniz.</p>
+                
+                <div class="dashboard-cards">
+                    <div class="dashboard-card">
+                        <i class="fas fa-comments"></i>
+                        <h3>Toplam Mesaj</h3>
+                        <p id="total-messages">0</p>
+                    </div>
+                    <div class="dashboard-card success">
+                        <i class="fas fa-chart-line"></i>
+                        <h3>Performans Puanı</h3>
+                        <p id="performance-score">0</p>
+                    </div>
+                    <div class="dashboard-card warning">
+                        <i class="fas fa-users"></i>
+                        <h3>Aktif Kullanıcılar</h3>
+                        <p id="active-users">0</p>
+                    </div>
+                    <div class="dashboard-card danger">
+                        <i class="fas fa-tasks"></i>
+                        <h3>Tamamlanan Görevler</h3>
+                        <p id="completed-tasks">0</p>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 30px;">
+                    <h3 style="margin-bottom: 15px;">Son Aktiviteler</h3>
+                    <div id="recent-activities" style="background-color: #f9f9f9; padding: 15px; border-radius: var(--border-radius);">
+                        <p>Henüz aktivite yok.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sohbet -->
+            <div class="app-section" id="chat-section">
+                <div class="section-header">
+                    <h2>Sohbet</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-primary" id="file-share-btn"><i class="fas fa-file-upload"></i> Dosya Seç</button>
+                        <input type="file" id="file-input" class="file-input" multiple>
+                    </div>
+                </div>
+                
+                <div class="chat-container">
+                    <div class="chat-sidebar">
+                        <div style="padding: 15px; border-bottom: 1px solid #ddd;">
+                            <input type="text" placeholder="Kullanıcı ara..." style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 20px;">
+                        </div>
+                        <ul class="user-list" id="user-list">
+                            <!-- Kullanıcılar buraya eklenecek -->
+                        </ul>
+                        
+                        <!-- Dosya Paylaşımı Bölümü -->
+                        <div class="file-share-container">
+                            <h4 style="margin-bottom: 10px;">Paylaşılan Dosyalar</h4>
+                            <div class="file-list" id="file-list">
+                                <!-- Dosyalar buraya eklenecek -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-main">
+                        <div class="chat-header" id="chat-header">
+                            Sohbet - Tüm Kullanıcılar
+                        </div>
+                        <div class="chat-messages" id="chat-messages">
+                            <!-- Mesajlar buraya eklenecek -->
+                        </div>
+                        
+                        <!-- Dosya Yükleme Alanı -->
+                        <div id="file-upload-area" class="file-upload-container" style="display: none;">
+                            <div class="file-upload-info" id="file-upload-info"></div>
+                            <button class="send-file-btn" id="send-file-btn"><i class="fas fa-share"></i> Gönder</button>
+                            <button class="btn btn-danger" id="cancel-file-btn"><i class="fas fa-times"></i> İptal</button>
+                        </div>
+                        
+                        <div class="chat-input">
+                            <input type="text" id="message-input" placeholder="Mesajınızı yazın...">
+                            <button id="send-message-btn"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Performans -->
+            <div class="app-section" id="performance-section">
+                <div class="section-header">
+                    <h2>Performans Takip</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-primary" id="add-activity-btn"><i class="fas fa-plus"></i> Aktivite Ekle</button>
+                        <button class="btn btn-success" id="daily-report-btn"><i class="fas fa-file-export"></i> Günlük Rapor</button>
+                    </div>
+                </div>
+                
+                <div class="performance-container">
+                    <!-- Mesai Kontrolü -->
+                    <div class="performance-card">
+                        <h3><i class="fas fa-clock"></i> Mesai Kontrolü</h3>
+                        <div class="shift-controls">
+                            <button class="shift-btn start" id="start-shift-btn"><i class="fas fa-play-circle"></i> Mesai Başlat</button>
+                            <button class="shift-btn end" id="end-shift-btn" disabled><i class="fas fa-stop-circle"></i> Mesai Bitir</button>
+                        </div>
+                        <div class="shift-info" id="shift-info">
+                            <p>Mesai başlatılmadı.</p>
+                            <div class="shift-duration" id="shift-duration" style="display: none;">
+                                Geçen Süre: <span id="shift-timer">00:00:00</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Departman Seçimi -->
+                    <div class="performance-card">
+                        <h3><i class="fas fa-sitemap"></i> Departman</h3>
+                        <div class="department-selector">
+                            <button class="department-btn active" data-department="sales">Satış</button>
+                            <button class="department-btn" data-department="service">Servis</button>
+                            <button class="department-btn" data-department="customer-relations">Müşteri İlişkileri</button>
+                            <button class="department-btn" data-department="insurance">Sigorta</button>
+                        </div>
+                        <div id="department-activities">
+                            <!-- Departmana özel aktiviteler buraya eklenecek -->
+                        </div>
+                    </div>
+                    
+                    <!-- Aktivite Formu -->
+                    <div class="performance-card full-width">
+                        <h3><i class="fas fa-tasks"></i> Aktivite Ekle</h3>
+                        <div class="activity-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="activity-type">Aktivite Türü</label>
+                                    <select id="activity-type">
+                                        <option value="">Aktivite seçin</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="customer-name">Müşteri Adı</label>
+                                    <input type="text" id="customer-name" placeholder="Müşteri adı">
+                                </div>
+                            </div>
+                            
+                            <div class="activity-timer" id="activity-timer" style="display: none;">
+                                Süre: <span id="activity-duration">00:00:00</span>
+                            </div>
+                            
+                            <div class="activity-controls">
+                                <button class="btn btn-success" id="start-activity-btn"><i class="fas fa-play"></i> Aktiviteyi Başlat</button>
+                                <button class="btn btn-danger" id="stop-activity-btn" disabled><i class="fas fa-stop"></i> Aktiviteyi Bitir</button>
+                                <button class="btn btn-primary" id="save-activity-btn" disabled><i class="fas fa-save"></i> Aktiviteyi Kaydet</button>
+                            </div>
+                            
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label for="activity-notes">Notlar</label>
+                                <textarea id="activity-notes" rows="3" placeholder="Aktivite notları" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: var(--border-radius);"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Günlük Aktiviteler -->
+                    <div class="performance-card full-width">
+                        <h3><i class="fas fa-list"></i> Günlük Aktiviteler</h3>
+                        <div class="activity-list" id="activity-list">
+                            <p>Henüz aktivite eklenmedi.</p>
+                        </div>
+                        <div style="margin-top: 15px; text-align: right;">
+                            <strong>Toplam Puan: <span id="total-points">0</span></strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Ayarlar -->
+            <div class="app-section" id="settings-section">
+                <div class="section-header">
+                    <h2>Ayarlar</h2>
+                </div>
+                
+                <div class="performance-container">
+                    <!-- Puanlama Ayarları -->
+                    <div class="performance-card full-width">
+                        <h3><i class="fas fa-cog"></i> Puanlama Ayarları</h3>
+                        <div class="scoring-config" id="scoring-config">
+                            <!-- Puanlama ayarları buraya eklenecek -->
+                        </div>
+                    </div>
+                    
+                    <!-- Kullanıcı Yönetimi -->
+                    <div class="performance-card full-width">
+                        <h3><i class="fas fa-users-cog"></i> Kullanıcı Yönetimi</h3>
+                        <div id="user-management">
+                            <!-- Kullanıcı yönetimi buraya eklenecek -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Uygulama veri yapısı
+        let companies = JSON.parse(localStorage.getItem('companies')) || [
+            {
+                id: '1',
+                name: 'Otomotiv A.Ş.',
+                admin: {
+                    username: 'admin',
+                    password: '123456'
+                },
+                users: [
+                    { id: '1', username: 'ahmet', password: '123456', department: 'Satış' },
+                    { id: '2', username: 'ayse', password: '123456', department: 'Servis' }
+                ],
+                scoring: {
+                    customer_meeting: 2,
+                    phone_call: 0.5,
+                    vehicle_sale: 200,
+                    accessory_sale: 50,
+                    maintenance_sale: 100,
+                    insurance_sale: 150,
+                    hybrid_sale: 250,
+                    other_sale: 30
+                },
+                files: [],
+                activities: [],
+                shifts: [],
+                messages: []
+            }
+        ];
+        
+        let currentUser = null;
+        let currentCompany = null;
+        let selectedDepartment = 'sales';
+        let userActivities = [];
+        let currentShift = null;
+        let shiftInterval = null;
+        let currentActivity = null;
+        let activityInterval = null;
+        let selectedFiles = [];
+        
+        // Sayfa yüklendiğinde çalışacak kod
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+        
+        function initializeApp() {
+            // Şifre göster/gizle işlevi
+            document.getElementById('toggle-admin-password').addEventListener('click', function() {
+                const passwordField = document.getElementById('admin-password');
+                const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordField.setAttribute('type', type);
+                this.classList.toggle('fa-eye');
+                this.classList.toggle('fa-eye-slash');
+            });
+            
+            document.getElementById('toggle-user-password').addEventListener('click', function() {
+                const passwordField = document.getElementById('user-password');
+                const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordField.setAttribute('type', type);
+                this.classList.toggle('fa-eye');
+                this.classList.toggle('fa-eye-slash');
+            });
+            
+            // Giriş sekmesi değiştirme
+            document.querySelectorAll('.login-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    const tabId = tab.getAttribute('data-login-tab');
+                    document.querySelectorAll('.login-content').forEach(c => c.classList.add('hidden'));
+                    document.getElementById(`${tabId}-login`).classList.remove('hidden');
+                });
+            });
+            
+            // Ana uygulama sekmesi değiştirme
+            document.querySelectorAll('.app-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.app-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    const tabId = tab.getAttribute('data-tab');
+                    document.querySelectorAll('.app-section').forEach(s => s.classList.remove('active'));
+                    document.getElementById(`${tabId}-section`).classList.add('active');
+                    
+                    // Sohbet sekmesine geçildiğinde kullanıcı listesini güncelle
+                    if (tabId === 'chat') {
+                        updateUserList();
+                        updateFileList();
+                        loadChatMessages();
+                    }
+                    
+                    // Performans sekmesine geçildiğinde aktiviteleri güncelle
+                    if (tabId === 'performance') {
+                        updateActivityList();
+                        updateDepartmentActivities();
+                    }
+                    
+                    // Ayarlar sekmesine geçildiğinde admin kontrollerini göster
+                    if (tabId === 'settings') {
+                        setupAdminControls();
+                    }
+                });
+            });
+            
+            // Departman seçimi
+            document.querySelectorAll('.department-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.department-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    selectedDepartment = this.getAttribute('data-department');
+                    updateDepartmentActivities();
+                });
+            });
+            
+            // Şirket listesini güncelle
+            updateCompanyList();
+            
+            // Olay dinleyicileri
+            setupEventListeners();
+        }
+        
+        function setupEventListeners() {
+            // Şirket oluşturma
+            document.getElementById('create-company').addEventListener('click', createCompany);
+            
+            // Kullanıcı girişi
+            document.getElementById('user-login-btn').addEventListener('click', userLogin);
+            
+            // Çıkış yap
+            document.getElementById('logout-btn').addEventListener('click', logout);
+            
+            // Dashboard butonları
+            document.getElementById('refresh-dashboard').addEventListener('click', updateDashboard);
+            document.getElementById('download-report').addEventListener('click', downloadDashboardReport);
+            
+            // Mesaj gönderme
+            document.getElementById('send-message-btn').addEventListener('click', sendMessage);
+            document.getElementById('message-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            // Dosya paylaşımı
+            document.getElementById('file-share-btn').addEventListener('click', function() {
+                document.getElementById('file-input').click();
+            });
+            
+            document.getElementById('file-input').addEventListener('change', handleFileSelect);
+            document.getElementById('send-file-btn').addEventListener('click', sendFiles);
+            document.getElementById('cancel-file-btn').addEventListener('click', cancelFileUpload);
+            
+            // Mesai kontrolü
+            document.getElementById('start-shift-btn').addEventListener('click', startShift);
+            document.getElementById('end-shift-btn').addEventListener('click', endShift);
+            
+            // Aktivite kontrolü
+            document.getElementById('start-activity-btn').addEventListener('click', startActivity);
+            document.getElementById('stop-activity-btn').addEventListener('click', stopActivity);
+            document.getElementById('save-activity-btn').addEventListener('click', saveActivity);
+            
+            // Günlük rapor
+            document.getElementById('daily-report-btn').addEventListener('click', generateDailyReport);
+        }
+        
+        function updateCompanyList() {
+            const companySelect = document.getElementById('user-company');
+            companySelect.innerHTML = '<option value="">Şirket seçin</option>';
+            
+            companies.forEach(company => {
+                const option = document.createElement('option');
+                option.value = company.id;
+                option.textContent = company.name;
+                companySelect.appendChild(option);
+            });
+        }
+        
+        function createCompany() {
+            const companyName = document.getElementById('company-name').value;
+            const adminUsername = document.getElementById('admin-username').value;
+            const adminPassword = document.getElementById('admin-password').value;
+            
+            if (!companyName || !adminUsername || !adminPassword) {
+                showError('Lütfen tüm alanları doldurun.');
+                return;
+            }
+            
+            // Yeni şirket oluştur
+            const newCompany = {
+                id: Date.now().toString(),
+                name: companyName,
+                admin: {
+                    username: adminUsername,
+                    password: adminPassword
+                },
+                users: [],
+                scoring: {
+                    customer_meeting: 2,
+                    phone_call: 0.5,
+                    vehicle_sale: 200,
+                    accessory_sale: 50,
+                    maintenance_sale: 100,
+                    insurance_sale: 150,
+                    hybrid_sale: 250,
+                    other_sale: 30
+                },
+                files: [],
+                activities: [],
+                shifts: [],
+                messages: []
+            };
+            
+            companies.push(newCompany);
+            localStorage.setItem('companies', JSON.stringify(companies));
+            
+            showSuccess('Şirket başarıyla oluşturuldu! Şimdi kullanıcı girişi sekmesinden giriş yapabilirsiniz.');
+            
+            // Formu temizle
+            document.getElementById('company-name').value = '';
+            document.getElementById('admin-username').value = '';
+            document.getElementById('admin-password').value = '';
+            
+            // Kullanıcı girişi sekmesindeki şirket listesini güncelle
+            updateCompanyList();
+            
+            // Kullanıcı girişi sekmesine geç
+            document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('[data-login-tab="user"]').classList.add('active');
+            document.querySelectorAll('.login-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById('user-login').classList.remove('hidden');
+        }
+        
+        function userLogin() {
+            const companyId = document.getElementById('user-company').value;
+            const username = document.getElementById('user-username').value;
+            const password = document.getElementById('user-password').value;
+            
+            if (!companyId || !username || !password) {
+                showError('Lütfen tüm alanları doldurun.');
+                return;
+            }
+            
+            const company = companies.find(c => c.id === companyId);
+            if (!company) {
+                showError('Şirket bulunamadı.');
+                return;
+            }
+            
+            // Admin girişi kontrolü
+            if (company.admin.username === username && company.admin.password === password) {
+                currentUser = { username, isAdmin: true };
+                currentCompany = company;
+                showMainApp();
+                return;
+            }
+            
+            // Normal kullanıcı girişi kontrolü
+            const user = company.users.find(u => u.username === username && u.password === password);
+            if (user) {
+                currentUser = { ...user, isAdmin: false };
+                currentCompany = company;
+                showMainApp();
+                return;
+            }
+            
+            showError('Kullanıcı adı veya şifre hatalı.');
+        }
+        
+        function showMainApp() {
+            // Giriş ekranını gizle
+            document.getElementById('login-screen').style.display = 'none';
+            
+            // Ana uygulamayı göster
+            document.getElementById('main-app').style.display = 'block';
+            
+            // Kullanıcı bilgilerini güncelle
+            document.getElementById('current-company').textContent = currentCompany.name;
+            document.getElementById('current-user').textContent = currentUser.username;
+            document.getElementById('current-user-avatar').textContent = currentUser.username.charAt(0).toUpperCase();
+            document.getElementById('user-role').textContent = currentUser.isAdmin ? 'Yönetici' : 'Kullanıcı';
+            
+            // Dashboard verilerini güncelle
+            updateDashboard();
+            
+            // Başarı mesajını göster
+            showSuccess('Giriş başarılı! Hoş geldiniz ' + currentUser.username);
+        }
+        
+        function updateDashboard() {
+            // Toplam mesaj sayısı
+            const totalMessages = currentCompany.messages ? currentCompany.messages.length : 0;
+            document.getElementById('total-messages').textContent = totalMessages;
+            
+            // Performans puanı
+            const userActivities = currentCompany.activities ? currentCompany.activities.filter(a => a.user === currentUser.username) : [];
+            const totalPoints = userActivities.reduce((sum, activity) => sum + (activity.points || 0), 0);
+            document.getElementById('performance-score').textContent = totalPoints;
+            
+            // Aktif kullanıcılar
+            document.getElementById('active-users').textContent = currentCompany.users.length + 1; // +1 for admin
+            
+            // Tamamlanan görevler
+            document.getElementById('completed-tasks').textContent = userActivities.length;
+            
+            // Son aktiviteler
+            const recentActivities = document.getElementById('recent-activities');
+            if (userActivities.length > 0) {
+                let html = '';
+                userActivities.slice(-5).reverse().forEach(activity => {
+                    html += `<div style="padding: 10px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-${getActivityIcon(activity.type)}" style="color: var(--primary-color);"></i>
+                        <span>${getActivityName(activity.type)} - ${activity.points} puan</span>
+                        <span style="margin-left: auto; font-size: 12px; color: #777;">${formatTime(activity.startTime)}</span>
+                    </div>`;
+                });
+                recentActivities.innerHTML = html;
+            } else {
+                recentActivities.innerHTML = '<p>Henüz aktivite yok.</p>';
+            }
+        }
+        
+        function downloadDashboardReport() {
+            const userActivities = currentCompany.activities ? currentCompany.activities.filter(a => a.user === currentUser.username) : [];
+            
+            if (userActivities.length === 0) {
+                showError('Henüz aktivite bulunmamaktadır.');
+                return;
+            }
+            
+            let report = `Dashboard Raporu - ${new Date().toLocaleDateString('tr-TR')}\n\n`;
+            report += `Kullanıcı: ${currentUser.username}\n`;
+            report += `Şirket: ${currentCompany.name}\n\n`;
+            
+            report += `Toplam Mesaj: ${currentCompany.messages ? currentCompany.messages.length : 0}\n`;
+            report += `Performans Puanı: ${userActivities.reduce((sum, activity) => sum + (activity.points || 0), 0)}\n`;
+            report += `Aktif Kullanıcılar: ${currentCompany.users.length + 1}\n`;
+            report += `Tamamlanan Görevler: ${userActivities.length}\n\n`;
+            
+            report += `Son Aktiviteler:\n`;
+            userActivities.slice(-5).reverse().forEach(activity => {
+                report += `- ${getActivityName(activity.type)}: ${activity.points} puan (${formatTime(activity.startTime)})\n`;
+            });
+            
+            // Raporu indir
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `dashboard-raporu-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showSuccess('Dashboard raporu başarıyla indirildi.');
+        }
+        
+        function getActivityIcon(activityType) {
+            const icons = {
+                'customer_meeting': 'users',
+                'phone_call': 'phone',
+                'vehicle_sale': 'car',
+                'accessory_sale': 'cog',
+                'maintenance_sale': 'tools',
+                'insurance_sale': 'file-contract',
+                'hybrid_sale': 'leaf',
+                'other_sale': 'shopping-cart'
+            };
+            return icons[activityType] || 'circle';
+        }
+        
+        function formatTime(timeString) {
+            if (!timeString) return '';
+            const time = new Date(timeString);
+            return time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        function updateUserList() {
+            const userList = document.getElementById('user-list');
+            userList.innerHTML = '';
+            
+            // Admin kullanıcıyı ekle
+            const adminItem = document.createElement('li');
+            adminItem.className = 'user-item';
+            adminItem.innerHTML = `
+                <div class="user-avatar-small">${currentCompany.admin.username.charAt(0).toUpperCase()}</div>
+                <div>
+                    <div style="font-weight: 500;">${currentCompany.admin.username} (Admin)</div>
+                    <div style="font-size: 12px; color: #777;">Çevrimiçi</div>
+                </div>
+            `;
+            userList.appendChild(adminItem);
+            
+            // Diğer kullanıcıları ekle
+            currentCompany.users.forEach(user => {
+                const userItem = document.createElement('li');
+                userItem.className = 'user-item';
+                userItem.innerHTML = `
+                    <div class="user-avatar-small">${user.username.charAt(0).toUpperCase()}</div>
+                    <div>
+                        <div style="font-weight: 500;">${user.username}</div>
+                        <div style="font-size: 12px; color: #777;">${user.department}</div>
+                    </div>
+                `;
+                userList.appendChild(userItem);
+            });
+        }
+        
+        function updateFileList() {
+            const fileList = document.getElementById('file-list');
+            fileList.innerHTML = '';
+            
+            if (!currentCompany.files || currentCompany.files.length === 0) {
+                fileList.innerHTML = '<p>Henüz dosya paylaşılmadı.</p>';
+                return;
+            }
+            
+            currentCompany.files.forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <div class="file-info">
+                        <i class="fas fa-file ${file.type === 'image' ? 'fa-image' : 'fa-file'}" class="file-icon"></i>
+                        <div>
+                            <div style="font-weight: 500;">${file.name}</div>
+                            <div style="font-size: 12px; color: #777;">${file.size} - ${file.sender}</div>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="file-action-btn download-file" data-fileid="${file.id}">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        ${currentUser.isAdmin ? `<button class="file-action-btn delete-file" data-fileid="${file.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>` : ''}
+                    </div>
+                `;
+                fileList.appendChild(fileItem);
+            });
+            
+            // Dosya indirme ve silme işlevleri
+            document.querySelectorAll('.download-file').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const fileId = this.getAttribute('data-fileid');
+                    downloadFile(fileId);
+                });
+            });
+            
+            document.querySelectorAll('.delete-file').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const fileId = this.getAttribute('data-fileid');
+                    deleteFile(fileId);
+                });
+            });
+        }
+        
+        function loadChatMessages() {
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.innerHTML = '';
+            
+            if (!currentCompany.messages || currentCompany.messages.length === 0) {
+                chatMessages.innerHTML = '<p style="text-align: center; color: #777; padding: 20px;">Henüz mesaj yok</p>';
+                return;
+            }
+            
+            currentCompany.messages.forEach(message => {
+                const messageElement = document.createElement('div');
+                const isCurrentUser = message.sender === currentUser.username;
+                messageElement.className = `message ${isCurrentUser ? 'sent' : 'received'}`;
+                
+                if (message.type === 'file') {
+                    messageElement.innerHTML = `
+                        <div>
+                            <i class="fas fa-file"></i> 
+                            <strong>${message.fileName}</strong> dosyasını paylaştı.
+                            <button class="file-action-btn download-file-inline" data-fileid="${message.fileId}" style="margin-left: 5px;">
+                                <i class="fas fa-download"></i> İndir
+                            </button>
+                        </div>
+                        <div class="message-time">${formatTime(message.timestamp)}</div>
+                    `;
+                } else {
+                    messageElement.innerHTML = `
+                        <div>${message.text}</div>
+                        <div class="message-time">${formatTime(message.timestamp)}</div>
+                    `;
+                }
+                
+                chatMessages.appendChild(messageElement);
+                
+                // İndirme butonuna event listener ekle
+                if (message.type === 'file') {
+                    messageElement.querySelector('.download-file-inline').addEventListener('click', function() {
+                        const fileId = this.getAttribute('data-fileid');
+                        downloadFile(fileId);
+                    });
+                }
+            });
+            
+            // Mesajları en alta kaydır
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function sendMessage() {
+            const messageInput = document.getElementById('message-input');
+            const messageText = messageInput.value.trim();
+            
+            if (messageText === '') return;
+            
+            const message = {
+                id: Date.now().toString(),
+                sender: currentUser.username,
+                text: messageText,
+                timestamp: new Date().toISOString(),
+                type: 'text'
+            };
+            
+            if (!currentCompany.messages) currentCompany.messages = [];
+            currentCompany.messages.push(message);
+            localStorage.setItem('companies', JSON.stringify(companies));
+            
+            // Mesaj kutusunu güncelle
+            loadChatMessages();
+            messageInput.value = '';
+            
+            // Dashboard'ı güncelle
+            updateDashboard();
+        }
+        
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            
+            if (files.length === 0) return;
+            
+            selectedFiles = Array.from(files);
+            
+            // Dosya bilgilerini göster
+            const fileUploadArea = document.getElementById('file-upload-area');
+            const fileUploadInfo = document.getElementById('file-upload-info');
+            
+            let fileInfo = '';
+            selectedFiles.forEach(file => {
+                fileInfo += `<div>${file.name} (${formatFileSize(file.size)})</div>`;
+            });
+            
+            fileUploadInfo.innerHTML = fileInfo;
+            fileUploadArea.style.display = 'flex';
+            
+            // Input'u temizle
+            e.target.value = '';
+        }
+        
+        function sendFiles() {
+            if (selectedFiles.length === 0) return;
+            
+            selectedFiles.forEach(file => {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const fileData = {
+                        id: Date.now().toString() + Math.random(),
+                        name: file.name,
+                        type: file.type.split('/')[0],
+                        size: formatFileSize(file.size),
+                        data: e.target.result,
+                        sender: currentUser.username,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    if (!currentCompany.files) currentCompany.files = [];
+                    currentCompany.files.push(fileData);
+                    
+                    // Mesaj olarak dosya paylaşımını kaydet
+                    const message = {
+                        id: Date.now().toString(),
+                        sender: currentUser.username,
+                        fileName: file.name,
+                        fileId: fileData.id,
+                        timestamp: new Date().toISOString(),
+                        type: 'file'
+                    };
+                    
+                    if (!currentCompany.messages) currentCompany.messages = [];
+                    currentCompany.messages.push(message);
+                    
+                    localStorage.setItem('companies', JSON.stringify(companies));
+                    
+                    // Dosya listesini güncelle
+                    updateFileList();
+                    
+                    // Sohbet mesajlarını güncelle
+                    loadChatMessages();
+                };
+                
+                reader.readAsDataURL(file);
+            });
+            
+            // Dosya yükleme alanını gizle
+            document.getElementById('file-upload-area').style.display = 'none';
+            selectedFiles = [];
+            
+            showSuccess('Dosya(lar) başarıyla paylaşıldı.');
+        }
+        
+        function cancelFileUpload() {
+            document.getElementById('file-upload-area').style.display = 'none';
+            selectedFiles = [];
+        }
+        
+        function downloadFile(fileId) {
+            const file = currentCompany.files.find(f => f.id === fileId);
+            if (!file) return;
+            
+            const a = document.createElement('a');
+            a.href = file.data;
+            a.download = file.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+        
+        function deleteFile(fileId) {
+            if (!currentUser.isAdmin) {
+                showError('Sadece admin dosya silebilir.');
+                return;
+            }
+            
+            currentCompany.files = currentCompany.files.filter(f => f.id !== fileId);
+            localStorage.setItem('companies', JSON.stringify(companies));
+            updateFileList();
+            showSuccess('Dosya başarıyla silindi.');
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function startShift() {
+            if (!navigator.geolocation) {
+                showError('Konum bilgisi alınamıyor. Tarayıcınız bu özelliği desteklemiyor.');
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const now = new Date();
+                    currentShift = {
+                        userId: currentUser.username,
+                        startTime: now,
+                        startLocation: {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        },
+                        activities: []
+                    };
+                    
+                    // Mesai bilgilerini güncelle
+                    document.getElementById('shift-info').innerHTML = `
+                        <p><strong>Mesai Başlangıcı:</strong> ${now.toLocaleString('tr-TR')}</p>
+                        <p><strong>Konum:</strong> ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}</p>
+                    `;
+                    
+                    // Süre gösterimini aktif et
+                    document.getElementById('shift-duration').style.display = 'block';
+                    
+                    // Butonları güncelle
+                    document.getElementById('start-shift-btn').disabled = true;
+                    document.getElementById('end-shift-btn').disabled = false;
+                    
+                    // Süre sayacını başlat
+                    shiftInterval = setInterval(updateShiftTimer, 1000);
+                    
+                    showSuccess('Mesai başarıyla başlatıldı.');
+                },
+                function(error) {
+                    showError('Konum bilgisi alınamadı: ' + error.message);
+                }
+            );
+        }
+        
+        function updateShiftTimer() {
+            if (!currentShift) return;
+            
+            const now = new Date();
+            const diff = now - currentShift.startTime;
+            const hours = Math.floor(diff / 3600000);
+            const minutes = Math.floor((diff % 3600000) / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            
+            document.getElementById('shift-timer').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function endShift() {
+            if (!navigator.geolocation) {
+                showError('Konum bilgisi alınamıyor. Tarayıcınız bu özelliği desteklemiyor.');
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const now = new Date();
+                    currentShift.endTime = now;
+                    currentShift.endLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    
+                    // Mesai bilgilerini güncelle
+                    document.getElementById('shift-info').innerHTML += `
+                        <p><strong>Mesai Bitişi:</strong> ${now.toLocaleString('tr-TR')}</p>
+                        <p><strong>Konum:</strong> ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}</p>
+                    `;
+                    
+                    // Butonları güncelle
+                    document.getElementById('start-shift-btn').disabled = false;
+                    document.getElementById('end-shift-btn').disabled = true;
+                    
+                    // Süre sayacını durdur
+                    clearInterval(shiftInterval);
+                    
+                    // Mesaiyi kaydet
+                    if (!currentCompany.shifts) currentCompany.shifts = [];
+                    currentCompany.shifts.push(currentShift);
+                    localStorage.setItem('companies', JSON.stringify(companies));
+                    
+                    showSuccess('Mesai başarıyla sonlandırıldı.');
+                },
+                function(error) {
+                    showError('Konum bilgisi alınamadı: ' + error.message);
+                }
+            );
+        }
+        
+        function updateDepartmentActivities() {
+            const activityTypeSelect = document.getElementById('activity-type');
+            activityTypeSelect.innerHTML = '<option value="">Aktivite seçin</option>';
+            
+            const activities = getDepartmentActivities(selectedDepartment);
+            
+            activities.forEach(activity => {
+                const option = document.createElement('option');
+                option.value = activity.id;
+                option.textContent = activity.name;
+                activityTypeSelect.appendChild(option);
+            });
+        }
+        
+        function getDepartmentActivities(department) {
+            const activities = {
+                sales: [
+                    { id: 'customer_meeting', name: 'Müşteri Görüşmesi (Yüz Yüze)' },
+                    { id: 'phone_call', name: 'Telefon Görüşmesi' },
+                    { id: 'vehicle_sale', name: 'Araç Satışı' },
+                    { id: 'accessory_sale', name: 'Aksesuar Satışı' },
+                    { id: 'maintenance_sale', name: 'Bakım Satışı' },
+                    { id: 'insurance_sale', name: 'Sigorta Satışı' },
+                    { id: 'hybrid_sale', name: 'Hibrit Satışı' },
+                    { id: 'other_sale', name: 'Diğer Satış' }
+                ],
+                service: [
+                    { id: 'customer_meeting', name: 'Müşteri Görüşmesi (Yüz Yüze)' },
+                    { id: 'phone_call', name: 'Telefon Görüşmesi' },
+                    { id: 'maintenance_sale', name: 'Bakım Satışı' },
+                    { id: 'other_sale', name: 'Diğer İşlem' }
+                ],
+                'customer-relations': [
+                    { id: 'customer_meeting', name: 'Müşteri Görüşmesi (Yüz Yüze)' },
+                    { id: 'phone_call', name: 'Telefon Görüşmesi' },
+                    { id: 'other_sale', name: 'Diğer İşlem' }
+                ],
+                insurance: [
+                    { id: 'customer_meeting', name: 'Müşteri Görüşmesi (Yüz Yüze)' },
+                    { id: 'phone_call', name: 'Telefon Görüşmesi' },
+                    { id: 'insurance_sale', name: 'Sigorta Satışı' },
+                    { id: 'other_sale', name: 'Diğer İşlem' }
+                ]
+            };
+            
+            return activities[department] || [];
+        }
+        
+        function startActivity() {
+            const activityType = document.getElementById('activity-type').value;
+            const customerName = document.getElementById('customer-name').value;
+            
+            if (!activityType) {
+                showError('Lütfen bir aktivite türü seçin.');
+                return;
+            }
+            
+            const now = new Date();
+            currentActivity = {
+                id: Date.now().toString(),
+                user: currentUser.username,
+                department: selectedDepartment,
+                type: activityType,
+                customerName,
+                startTime: now,
+                notes: document.getElementById('activity-notes').value
+            };
+            
+            // Aktivite zamanlayıcısını başlat
+            document.getElementById('activity-timer').style.display = 'block';
+            activityInterval = setInterval(updateActivityTimer, 1000);
+            
+            // Butonları güncelle
+            document.getElementById('start-activity-btn').disabled = true;
+            document.getElementById('stop-activity-btn').disabled = false;
+            
+            showSuccess('Aktivite başlatıldı.');
+        }
+        
+        function updateActivityTimer() {
+            if (!currentActivity) return;
+            
+            const now = new Date();
+            const diff = now - currentActivity.startTime;
+            const hours = Math.floor(diff / 3600000);
+            const minutes = Math.floor((diff % 3600000) / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            
+            document.getElementById('activity-duration').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function stopActivity() {
+            if (!currentActivity) return;
+            
+            const now = new Date();
+            currentActivity.endTime = now;
+            currentActivity.duration = (now - currentActivity.startTime) / (1000 * 60 * 60); // saat cinsinden
+            
+            // Aktivite zamanlayıcısını durdur
+            clearInterval(activityInterval);
+            
+            // Butonları güncelle
+            document.getElementById('stop-activity-btn').disabled = true;
+            document.getElementById('save-activity-btn').disabled = false;
+            
+            showSuccess('Aktivite durduruldu. Kaydet butonuna basarak kaydedebilirsiniz.');
+        }
+        
+        function saveActivity() {
+            if (!currentActivity) return;
+            
+            // Puanı hesapla
+            currentActivity.points = calculateActivityPoints(currentActivity.type, currentActivity.duration);
+            currentActivity.date = new Date().toISOString().split('T')[0];
+            
+            // Aktiviteleri kaydet
+            if (!currentCompany.activities) currentCompany.activities = [];
+            currentCompany.activities.push(currentActivity);
+            localStorage.setItem('companies', JSON.stringify(companies));
+            
+            // Formu temizle
+            document.getElementById('customer-name').value = '';
+            document.getElementById('activity-notes').value = '';
+            document.getElementById('activity-timer').style.display = 'none';
+            
+            // Butonları sıfırla
+            document.getElementById('start-activity-btn').disabled = false;
+            document.getElementById('save-activity-btn').disabled = true;
+            
+            // Aktiviteleri güncelle
+            updateActivityList();
+            
+            showSuccess('Aktivite başarıyla kaydedildi. Puan: ' + currentActivity.points);
+            
+            currentActivity = null;
+        }
+        
+        function calculateActivityPoints(activityType, duration) {
+            const basePoints = currentCompany.scoring[activityType] || 1;
+            return Math.round(basePoints * duration * 10) / 10;
+        }
+        
+        function updateActivityList() {
+            const activityList = document.getElementById('activity-list');
+            const userActivities = currentCompany.activities ? currentCompany.activities.filter(a => a.user === currentUser.username && a.date === new Date().toISOString().split('T')[0]) : [];
+            
+            if (userActivities.length === 0) {
+                activityList.innerHTML = '<p>Henüz aktivite eklenmedi.</p>';
+                document.getElementById('total-points').textContent = '0';
+                return;
+            }
+            
+            let html = '';
+            let totalPoints = 0;
+            
+            userActivities.forEach(activity => {
+                totalPoints += activity.points;
+                const duration = activity.duration ? activity.duration.toFixed(1) + ' saat' : 'Devam ediyor';
+                html += `
+                    <div class="activity-item">
+                        <div class="activity-details">
+                            <div><strong>${getActivityName(activity.type)}</strong></div>
+                            <div style="font-size: 14px; color: #777;">
+                                ${activity.customerName ? 'Müşteri: ' + activity.customerName + ' • ' : ''}
+                                ${duration} • 
+                                ${activity.startTime ? formatTime(activity.startTime.toISOString()) : ''}
+                            </div>
+                        </div>
+                        <div class="activity-points">${activity.points} puan</div>
+                    </div>
+                `;
+            });
+            
+            activityList.innerHTML = html;
+            document.getElementById('total-points').textContent = totalPoints.toFixed(1);
+            
+            // Dashboard'ı güncelle
+            updateDashboard();
+        }
+        
+        function getActivityName(activityType) {
+            const names = {
+                'customer_meeting': 'Müşteri Görüşmesi',
+                'phone_call': 'Telefon Görüşmesi',
+                'vehicle_sale': 'Araç Satışı',
+                'accessory_sale': 'Aksesuar Satışı',
+                'maintenance_sale': 'Bakım Satışı',
+                'insurance_sale': 'Sigorta Satışı',
+                'hybrid_sale': 'Hibrit Satışı',
+                'other_sale': 'Diğer Satış'
+            };
+            return names[activityType] || activityType;
+        }
+        
+        function generateDailyReport() {
+            const userActivities = currentCompany.activities ? currentCompany.activities.filter(a => a.user === currentUser.username && a.date === new Date().toISOString().split('T')[0]) : [];
+            
+            if (userActivities.length === 0) {
+                showError('Bugün için kayıtlı aktivite bulunmamaktadır.');
+                return;
+            }
+            
+            let report = `Günlük Performans Raporu - ${new Date().toLocaleDateString('tr-TR')}\n\n`;
+            report += `Kullanıcı: ${currentUser.username}\n`;
+            report += `Departman: ${getDepartmentName(selectedDepartment)}\n\n`;
+            
+            let totalPoints = 0;
+            userActivities.forEach(activity => {
+                report += `• ${getActivityName(activity.type)}: ${activity.points} puan (${activity.duration.toFixed(1)} saat)\n`;
+                if (activity.customerName) {
+                    report += `  Müşteri: ${activity.customerName}\n`;
+                }
+                if (activity.notes) {
+                    report += `  Not: ${activity.notes}\n`;
+                }
+                report += '\n';
+                totalPoints += activity.points;
+            });
+            
+            report += `TOPLAM PUAN: ${totalPoints.toFixed(1)}\n`;
+            
+            // Raporu indir
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `performans-raporu-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showSuccess('Günlük rapor başarıyla oluşturuldu ve indirildi.');
+        }
+        
+        function getDepartmentName(department) {
+            const names = {
+                'sales': 'Satış',
+                'service': 'Servis',
+                'customer-relations': 'Müşteri İlişkileri',
+                'insurance': 'Sigorta'
+            };
+            return names[department] || department;
+        }
+        
+        function setupAdminControls() {
+            const scoringConfig = document.getElementById('scoring-config');
+            const userManagement = document.getElementById('user-management');
+            
+            if (!currentUser.isAdmin) {
+                scoringConfig.innerHTML = '<p>Puanlama ayarlarını yönetmek için admin hesabıyla giriş yapmalısınız.</p>';
+                userManagement.innerHTML = '<p>Kullanıcı yönetimi için admin hesabıyla giriş yapmalısınız.</p>';
+                return;
+            }
+            
+            // Puanlama ayarları
+            let scoringHTML = '<div class="scoring-config-list">';
+            for (const [key, value] of Object.entries(currentCompany.scoring)) {
+                scoringHTML += `
+                    <div class="scoring-item">
+                        <div>${getActivityName(key)}</div>
+                        <input type="number" class="scoring-input" value="${value}" data-key="${key}" step="0.1" min="0">
+                    </div>
+                `;
+            }
+            scoringHTML += '</div><button class="btn btn-primary" id="save-scoring-btn"><i class="fas fa-save"></i> Puanlamayı Kaydet</button>';
+            scoringConfig.innerHTML = scoringHTML;
+            
+            document.getElementById('save-scoring-btn').addEventListener('click', saveScoring);
+            
+            // Kullanıcı yönetimi
+            let userHTML = `
+                <div class="form-group">
+                    <label for="new-username">Yeni Kullanıcı Adı</label>
+                    <input type="text" id="new-username" placeholder="Kullanıcı adı">
+                </div>
+                <div class="form-group">
+                    <label for="new-password">Şifre</label>
+                    <input type="password" id="new-password" placeholder="Şifre">
+                </div>
+                <div class="form-group">
+                    <label for="new-department">Departman</label>
+                    <select id="new-department">
+                        <option value="sales">Satış</option>
+                        <option value="service">Servis</option>
+                        <option value="customer-relations">Müşteri İlişkileri</option>
+                        <option value="insurance">Sigorta</option>
+                    </select>
+                </div>
+                <button class="btn btn-success" id="add-user-btn"><i class="fas fa-user-plus"></i> Kullanıcı Ekle</button>
+                
+                <h4 style="margin-top: 20px;">Mevcut Kullanıcılar</h4>
+                <div id="existing-users" style="margin-top: 10px;">
+            `;
+            
+            if (currentCompany.users.length === 0) {
+                userHTML += '<p>Henüz kullanıcı eklenmemiş.</p>';
+            } else {
+                currentCompany.users.forEach(user => {
+                    userHTML += `
+                        <div class="activity-item">
+                            <div class="activity-details">
+                                <div><strong>${user.username}</strong></div>
+                                <div style="font-size: 14px; color: #777;">${getDepartmentName(user.department)}</div>
+                            </div>
+                            <button class="btn btn-danger delete-user" data-userid="${user.id}">
+                                <i class="fas fa-trash"></i> Sil
+                            </button>
+                        </div>
+                    `;
+                });
+            }
+            
+            userHTML += '</div>';
+            userManagement.innerHTML = userHTML;
+            
+            document.getElementById('add-user-btn').addEventListener('click', addUser);
+            
+            document.querySelectorAll('.delete-user').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-userid');
+                    deleteUser(userId);
+                });
+            });
+        }
+        
+        function saveScoring() {
+            const inputs = document.querySelectorAll('.scoring-input');
+            inputs.forEach(input => {
+                const key = input.getAttribute('data-key');
+                const value = parseFloat(input.value);
+                currentCompany.scoring[key] = value;
+            });
+            
+            localStorage.setItem('companies', JSON.stringify(companies));
+            showSuccess('Puanlama ayarları başarıyla güncellendi.');
+        }
+        
+        function addUser() {
+            const username = document.getElementById('new-username').value;
+            const password = document.getElementById('new-password').value;
+            const department = document.getElementById('new-department').value;
+            
+            if (!username || !password) {
+                showError('Lütfen kullanıcı adı ve şifre girin.');
+                return;
+            }
+            
+            // Kullanıcı adı kontrolü
+            if (currentCompany.users.some(u => u.username === username) || currentCompany.admin.username === username) {
+                showError('Bu kullanıcı adı zaten kullanılıyor.');
+                return;
+            }
+            
+            const newUser = {
+                id: Date.now().toString(),
+                username,
+                password,
+                department
+            };
+            
+            currentCompany.users.push(newUser);
+            localStorage.setItem('companies', JSON.stringify(companies));
+            
+            // Formu temizle
+            document.getElementById('new-username').value = '';
+            document.getElementById('new-password').value = '';
+            
+            // Kullanıcı listesini güncelle
+            setupAdminControls();
+            showSuccess('Kullanıcı başarıyla eklendi.');
+        }
+        
+        function deleteUser(userId) {
+            currentCompany.users = currentCompany.users.filter(u => u.id !== userId);
+            localStorage.setItem('companies', JSON.stringify(companies));
+            setupAdminControls();
+            showSuccess('Kullanıcı başarıyla silindi.');
+        }
+        
+        function logout() {
+            if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+                // Süre sayaçlarını durdur
+                if (shiftInterval) clearInterval(shiftInterval);
+                if (activityInterval) clearInterval(activityInterval);
+                
+                // Ana uygulamayı gizle
+                document.getElementById('main-app').style.display = 'none';
+                
+                // Giriş ekranını göster
+                document.getElementById('login-screen').style.display = 'flex';
+                
+                // Formları temizle
+                document.getElementById('company-name').value = '';
+                document.getElementById('admin-username').value = '';
+                document.getElementById('admin-password').value = '';
+                document.getElementById('user-username').value = '';
+                document.getElementById('user-password').value = '';
+                
+                // Mesajları gizle
+                document.getElementById('success-message').style.display = 'none';
+                document.getElementById('error-message').style.display = 'none';
+                
+                // Giriş sekmesini sıfırla
+                document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+                document.querySelector('[data-login-tab="company"]').classList.add('active');
+                document.querySelectorAll('.login-content').forEach(c => c.classList.add('hidden'));
+                document.getElementById('company-login').classList.remove('hidden');
+                
+                // Değişkenleri sıfırla
+                currentUser = null;
+                currentCompany = null;
+                currentShift = null;
+                currentActivity = null;
+            }
+        }
+        
+        function showSuccess(message) {
+            const successElement = document.getElementById('success-message');
+            successElement.textContent = message;
+            successElement.style.display = 'block';
+            
+            // Hata mesajını gizle
+            document.getElementById('error-message').style.display = 'none';
+            
+            // 5 saniye sonra gizle
+            setTimeout(() => {
+                successElement.style.display = 'none';
+            }, 5000);
+        }
+        
+        function showError(message) {
+            const errorElement = document.getElementById('error-message');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            
+            // Başarı mesajını gizle
+            document.getElementById('success-message').style.display = 'none';
+            
+            // 5 saniye sonra gizle
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
