@@ -213,7 +213,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   const isOwnMessage = (msg: Message) => msg.senderId === user.id;
 
   return (
-    <div className="flex h-[600px] border rounded-lg overflow-hidden bg-white shadow-sm">
+    <div className="flex h-[500px] max-h-[70vh] border rounded-lg overflow-hidden bg-white shadow-sm">
       {/* Hidden file input */}
       <input
         type="file"
@@ -225,7 +225,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
       />
 
       {/* Sidebar */}
-      <div className="w-80 bg-slate-50 border-r flex flex-col">
+      <div className="w-64 md:w-80 bg-slate-50 border-r flex flex-col shrink-0">
         <div className="p-4 border-b bg-white">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -403,38 +403,38 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
               </div>
             )}
 
-            <div className="p-4 bg-white border-t">
+            <div className="p-3 bg-white border-t">
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground"
+                  className="text-muted-foreground shrink-0 h-8 w-8"
                   onClick={handleFileSelect}
                   disabled={isSending}
                   data-testid="button-attach-file"
                 >
-                  <Paperclip className="h-5 w-5" />
+                  <Paperclip className="h-4 w-4" />
                 </Button>
                 <Input
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                  placeholder="Bir mesaj yazın..."
-                  className="flex-1 rounded-full bg-slate-50 border-slate-200"
+                  placeholder="Mesaj yazın..."
+                  className="flex-1 min-w-0 rounded-full bg-slate-50 border-slate-200 text-sm h-9"
                   disabled={isSending}
                   data-testid="input-message"
                 />
                 <Button
                   onClick={handleSend}
                   size="icon"
-                  className="rounded-full h-10 w-10 shrink-0"
+                  className="rounded-full h-8 w-8 shrink-0"
                   disabled={isSending || (!messageInput.trim() && !selectedFile)}
                   data-testid="button-send-message"
                 >
                   {isSending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
-                    <Send className="h-4 w-4 ml-0.5" />
+                    <Send className="h-3 w-3" />
                   )}
                 </Button>
               </div>

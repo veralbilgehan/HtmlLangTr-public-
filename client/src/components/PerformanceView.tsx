@@ -394,7 +394,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 overflow-hidden">
       {/* Shift Controls */}
       <Card>
         <CardHeader>
@@ -463,24 +463,24 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
               )}
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Start Activities Column */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-primary border-b pb-2">Başlat Aktiviteleri</h3>
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-primary border-b pb-2 text-sm">Başlat Aktiviteleri</h3>
                   {ACTIVITY_TYPES.map((activity) => (
-                    <div key={`start-${activity.key}`} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                      <span className="text-sm font-medium">{activity.label}</span>
+                    <div key={`start-${activity.key}`} className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg">
+                      <span className="text-xs font-medium truncate flex-1 min-w-0">{activity.label}</span>
                       <Button
                         onClick={() => handleStartActivity(activity.key, activity.label)}
                         disabled={loadingActivity === activity.key || currentActivity !== null}
                         size="sm"
-                        className="min-w-[80px]"
+                        className="shrink-0 text-xs px-2 py-1 h-7"
                         data-testid={`button-start-${activity.key}`}
                       >
                         {loadingActivity === activity.key ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="h-3 w-3 animate-spin" />
                         ) : currentActivityKey === activity.key ? (
-                          <Badge variant="secondary">Aktif</Badge>
+                          <span className="text-xs">Aktif</span>
                         ) : (
                           <>
                             <Play className="mr-1 h-3 w-3" />
@@ -493,21 +493,21 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                 </div>
 
                 {/* End Activities Column */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-destructive border-b pb-2">Bitiş Aktiviteleri</h3>
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-destructive border-b pb-2 text-sm">Bitiş Aktiviteleri</h3>
                   {ACTIVITY_TYPES.map((activity) => (
-                    <div key={`end-${activity.key}`} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                      <span className="text-sm font-medium">{activity.label}</span>
+                    <div key={`end-${activity.key}`} className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg">
+                      <span className="text-xs font-medium truncate flex-1 min-w-0">{activity.label}</span>
                       <Button
                         onClick={() => handleEndActivity(activity.key, activity.label)}
                         disabled={loadingActivity === activity.key || currentActivityKey !== activity.key}
                         variant={currentActivityKey === activity.key ? "destructive" : "outline"}
                         size="sm"
-                        className="min-w-[80px]"
+                        className="shrink-0 text-xs px-2 py-1 h-7"
                         data-testid={`button-end-${activity.key}`}
                       >
                         {loadingActivity === activity.key ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="h-3 w-3 animate-spin" />
                         ) : (
                           <>
                             <Square className="mr-1 h-3 w-3" />
@@ -521,25 +521,25 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
               </div>
 
               {/* Duration Inputs */}
-              <div className="border-t mt-6 pt-4 space-y-4">
-                <h3 className="font-semibold">Aktivite Süreleri (Dakika)</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="border-t mt-4 pt-4 space-y-3">
+                <h3 className="font-semibold text-sm">Aktivite Süreleri (Dakika)</h3>
+                <div className="grid grid-cols-2 gap-3">
                   {ACTIVITY_TYPES.map((activity) => (
-                    <div key={`duration-${activity.key}`} className="space-y-2">
-                      <Label htmlFor={`${activity.key}-duration`} className="text-xs">{activity.label}</Label>
+                    <div key={`duration-${activity.key}`} className="space-y-1">
+                      <Label htmlFor={`${activity.key}-duration`} className="text-xs truncate block">{activity.label}</Label>
                       <Input
                         id={`${activity.key}-duration`}
                         data-testid={`input-duration-${activity.key}`}
                         type="number"
                         placeholder="0"
-                        className="bg-white"
+                        className="bg-white h-8 text-sm"
                         value={durations[activity.key as keyof typeof durations]}
                         onChange={(e) => setDurations({ ...durations, [activity.key]: e.target.value })}
                       />
                     </div>
                   ))}
                 </div>
-                <Button onClick={saveDurations} className="w-full" data-testid="button-save-durations">
+                <Button onClick={saveDurations} className="w-full h-8 text-sm" data-testid="button-save-durations">
                   Süreleri Kaydet
                 </Button>
               </div>
