@@ -5,7 +5,6 @@ import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { type User, insertUserSchema, insertShiftSchema, insertActivitySchema, insertMessageSchema } from "@shared/schema";
-import { WebSocketServer } from "ws";
 
 // Configure Passport
 passport.use(
@@ -63,43 +62,8 @@ export async function registerRoutes(
     next();
   };
 
-  // WebSocket setup for chat
-  const wss = new WebSocketServer({ server: httpServer });
-  const clients = new Map<string, any>();
-
-  wss.on("connection", (ws, req) => {
-    let userId: string | null = null;
-
-    ws.on("message", (message) => {
-      try {
-        const data = JSON.parse(message.toString());
-        
-        if (data.type === "auth") {
-          userId = data.userId;
-          if (userId) {
-            clients.set(userId, ws);
-          }
-        } else if (data.type === "message" && userId) {
-          // Broadcast to recipient
-          const recipientWs = clients.get(data.recipientId);
-          if (recipientWs && recipientWs.readyState === 1) {
-            recipientWs.send(JSON.stringify({
-              type: "new_message",
-              message: data.message,
-            }));
-          }
-        }
-      } catch (error) {
-        console.error("WebSocket error:", error);
-      }
-    });
-
-    ws.on("close", () => {
-      if (userId) {
-        clients.delete(userId);
-      }
-    });
-  });
+  // WebSocket for chat - disabled for now to avoid conflicts with Vite HMR
+  // Will be implemented separately or using HTTP polling
 
   // Auth routes
   app.post("/api/auth/login", (req, res, next) => {
