@@ -54,7 +54,11 @@ export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   senderId: varchar("sender_id").notNull().references(() => users.id),
   recipientId: varchar("recipient_id").notNull().references(() => users.id),
-  content: text("content").notNull(),
+  content: text("content"),
+  fileUrl: text("file_url"),
+  fileName: text("file_name"),
+  fileSize: integer("file_size"),
+  fileType: text("file_type"),
   read: boolean("read").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });

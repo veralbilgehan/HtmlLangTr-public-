@@ -5,6 +5,48 @@ import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { type User, insertUserSchema, insertShiftSchema, insertActivitySchema, insertMessageSchema } from "@shared/schema";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+// Configure multer for file uploads
+const uploadDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const fileStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({
+  storage: fileStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "text/plain",
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Desteklenmeyen dosya türü"));
+    }
+  },
+});
 
 // Configure Passport
 passport.use(
@@ -268,16 +310,50 @@ export async function registerRoutes(
     }
   });
 
+  // Serve uploaded files
+  app.use("/uploads", requireAuth, (req: any, res, next) => {
+    const filePath = path.join(uploadDir, req.path);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).json({ message: "Dosya bulunamadı" });
+    }
+  });
+
+  // File upload endpoint
+  app.post("/api/upload", requireAuth, upload.single("file"), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Dosya yüklenmedi" });
+      }
+
+      const fileUrl = `/uploads/${req.file.filename}`;
+      res.json({
+        fileUrl,
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+        fileType: req.file.mimetype,
+      });
+    } catch (error) {
+      console.error("File upload error:", error);
+      res.status(500).json({ message: "Dosya yüklenemedi" });
+    }
+  });
+
   // Message routes
   app.post("/api/messages", requireAuth, async (req: any, res) => {
     try {
       const senderId = req.user.id;
-      const { recipientId, content } = req.body;
+      const { recipientId, content, fileUrl, fileName, fileSize, fileType } = req.body;
 
       const message = await storage.createMessage({
         senderId,
         recipientId,
-        content,
+        content: content || null,
+        fileUrl: fileUrl || null,
+        fileName: fileName || null,
+        fileSize: fileSize || null,
+        fileType: fileType || null,
       });
 
       res.json({ message });
