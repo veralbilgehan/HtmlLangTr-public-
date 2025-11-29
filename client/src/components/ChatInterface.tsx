@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Send, Paperclip, File, Search } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import type { User } from "@/lib/auth";
 
 const USERS = [
   { id: 1, name: "Ahmet Yılmaz", role: "Departman Müdürü", status: "online", avatar: "AY" },
@@ -22,7 +23,11 @@ const MESSAGES = [
   { id: 4, senderId: 2, fileName: "toplanti-notlari.pdf", size: "2.4 MB", time: "10:33", type: "file" },
 ];
 
-export default function ChatInterface() {
+interface ChatInterfaceProps {
+  user: User;
+}
+
+export default function ChatInterface({ user }: ChatInterfaceProps) {
   const [activeUser, setActiveUser] = useState(USERS[1]);
   const [messageInput, setMessageInput] = useState("");
   const [messages, setMessages] = useState(MESSAGES);

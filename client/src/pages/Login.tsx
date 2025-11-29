@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { login } from "@/lib/auth";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -15,28 +16,37 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ username: "", password: "" });
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.username || !formData.password) {
+      toast({
+        title: "Hata",
+        description: "Lütfen kullanıcı adı ve şifre giriniz.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     
-    // Simulate login delay
-    setTimeout(() => {
+    try {
+      await login(formData.username, formData.password);
+      toast({
+        title: "Başarılı",
+        description: "Giriş yapıldı, yönlendiriliyorsunuz...",
+        className: "bg-green-500 text-white border-none",
+      });
+      setLocation("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Hata",
+        description: error.message || "Kullanıcı adı veya şifre hatalı",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
-      if (formData.username && formData.password) {
-        toast({
-          title: "Başarılı",
-          description: "Giriş yapıldı, yönlendiriliyorsunuz...",
-          className: "bg-green-500 text-white border-none",
-        });
-        setLocation("/dashboard");
-      } else {
-        toast({
-          title: "Hata",
-          description: "Lütfen kullanıcı adı ve şifre giriniz.",
-          variant: "destructive",
-        });
-      }
-    }, 1000);
+    }
   };
 
   return (
@@ -49,8 +59,8 @@ export default function Login() {
         <CardContent>
           <Tabs defaultValue="employee" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="employee">Personel Girişi</TabsTrigger>
-              <TabsTrigger value="manager">Yönetici Girişi</TabsTrigger>
+              <TabsTrigger value="employee" data-testid="tab-employee">Personel Girişi</TabsTrigger>
+              <TabsTrigger value="manager" data-testid="tab-manager">Yönetici Girişi</TabsTrigger>
             </TabsList>
             
             <TabsContent value="employee">
@@ -60,7 +70,8 @@ export default function Login() {
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input 
-                      id="username" 
+                      id="username"
+                      data-testid="input-username"
                       placeholder="Kullanıcı adınız" 
                       className="pl-9"
                       value={formData.username}
@@ -73,7 +84,8 @@ export default function Login() {
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input 
-                      id="password" 
+                      id="password"
+                      data-testid="input-password"
                       type={showPassword ? "text" : "password"} 
                       placeholder="••••••••" 
                       className="pl-9 pr-9"
@@ -82,6 +94,7 @@ export default function Login() {
                     />
                     <button 
                       type="button"
+                      data-testid="button-toggle-password"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
                     >
@@ -89,7 +102,7 @@ export default function Login() {
                     </button>
                   </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading} data-testid="button-login">
                   {loading ? "Giriş Yapılıyor..." : "Giriş Yap"}
                 </Button>
               </form>
@@ -102,7 +115,8 @@ export default function Login() {
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input 
-                      id="m-username" 
+                      id="m-username"
+                      data-testid="input-manager-username"
                       placeholder="Yönetici kodunuz" 
                       className="pl-9"
                       value={formData.username}
@@ -115,7 +129,8 @@ export default function Login() {
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input 
-                      id="m-password" 
+                      id="m-password"
+                      data-testid="input-manager-password"
                       type={showPassword ? "text" : "password"} 
                       placeholder="••••••••" 
                       className="pl-9 pr-9"
@@ -124,6 +139,7 @@ export default function Login() {
                     />
                     <button 
                       type="button"
+                      data-testid="button-toggle-manager-password"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
                     >
@@ -131,7 +147,7 @@ export default function Login() {
                     </button>
                   </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading} data-testid="button-manager-login">
                   {loading ? "Giriş Yapılıyor..." : "Yönetici Girişi"}
                 </Button>
               </form>
@@ -140,6 +156,7 @@ export default function Login() {
           
           <div className="mt-4 text-center text-sm text-muted-foreground">
             <p>Şifrenizi mi unuttunuz? Bilgi İşlem ile iletişime geçin.</p>
+            <p className="mt-2 text-xs">Test: calisan1 / yonetici1 - Şifre: 123456</p>
           </div>
         </CardContent>
       </Card>

@@ -1,7 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Activity, Users, CheckCircle, AlertTriangle, Briefcase, TrendingUp } from "lucide-react";
+import type { User } from "@/lib/auth";
 
-export default function DashboardHome() {
+interface DashboardHomeProps {
+  user: User;
+}
+
+export default function DashboardHome({ user }: DashboardHomeProps) {
   const stats = [
     { 
       title: "Toplam Puan", 
