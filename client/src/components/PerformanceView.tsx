@@ -43,12 +43,8 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
   const { toast } = useToast();
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [shiftDuration, setShiftDuration] = useState(0);
-  const [activeActivities, setActiveActivities] = useState<Record<string, Activity | null>>({
-    customer: null,
-    phone: null,
-    vehicle: null,
-    other: null,
-  });
+  const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
+  const [currentActivityKey, setCurrentActivityKey] = useState<string | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [loadingActivity, setLoadingActivity] = useState<string | null>(null);
@@ -62,6 +58,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
   useEffect(() => {
     fetchActiveShift();
     fetchActivities();
+    fetchActiveActivity();
   }, []);
 
   useEffect(() => {
@@ -96,6 +93,25 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
     }
   };
 
+  const fetchActiveActivity = async () => {
+    try {
+      const response = await fetch("/api/activities/active", {
+        credentials: "include",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.activity) {
+          setCurrentActivity(data.activity);
+          // Find the matching activity key
+          const matchingType = ACTIVITY_TYPES.find(t => t.label === data.activity.type);
+          setCurrentActivityKey(matchingType?.key || null);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching active activity:", error);
+    }
+  };
+
   const fetchActivities = async () => {
     try {
       const response = await fetch("/api/activities", {
@@ -104,16 +120,6 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
       if (response.ok) {
         const data = await response.json();
         setActivities(data.activities);
-        
-        // Check for any active activities and update state
-        const active = data.activities.find((a: Activity) => !a.endTime);
-        if (active) {
-          const activityKey = ACTIVITY_TYPES.find(t => t.label === active.type)?.key || "other";
-          setActiveActivities(prev => ({
-            ...prev,
-            [activityKey]: active,
-          }));
-        }
       }
     } catch (error) {
       console.error("Error fetching activities:", error);
@@ -249,6 +255,15 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
   };
 
   const handleStartActivity = async (activityKey: string, activityLabel: string) => {
+    if (currentActivity) {
+      toast({
+        title: "Uyarı",
+        description: "Önce mevcut aktiviteyi bitirmelisiniz",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoadingActivity(activityKey);
     try {
       const response = await fetch("/api/activities/start", {
@@ -263,10 +278,8 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
 
       if (response.ok) {
         const data = await response.json();
-        setActiveActivities(prev => ({
-          ...prev,
-          [activityKey]: data.activity,
-        }));
+        setCurrentActivity(data.activity);
+        setCurrentActivityKey(activityKey);
         toast({
           title: "Aktivite Başladı",
           description: `${activityLabel} kaydediliyor`,
@@ -291,12 +304,12 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
   };
 
   const handleEndActivity = async (activityKey: string, activityLabel: string) => {
-    const currentActivity = activeActivities[activityKey];
-    
-    if (!currentActivity) {
+    if (!currentActivity || currentActivityKey !== activityKey) {
       toast({
         title: "Uyarı",
-        description: `Önce ${activityLabel} aktivitesini başlatmalısınız`,
+        description: currentActivity 
+          ? `Şu anda aktif olan aktivite: ${currentActivity.type}` 
+          : `Önce ${activityLabel} aktivitesini başlatmalısınız`,
         variant: "destructive",
       });
       return;
@@ -315,17 +328,15 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
 
       if (response.ok) {
         const data = await response.json();
-        setActiveActivities(prev => ({
-          ...prev,
-          [activityKey]: null,
-        }));
-        
         const durationMinutes = data.activity.durationMinutes || 0;
+        
         setDurations(prev => ({
           ...prev,
           [activityKey]: durationMinutes.toString(),
         }));
 
+        setCurrentActivity(null);
+        setCurrentActivityKey(null);
         await fetchActivities();
 
         toast({
@@ -431,6 +442,16 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
           <Card>
             <CardHeader>
               <CardTitle>Aktivite Yönetimi</CardTitle>
+              {currentActivity && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm font-semibold text-blue-900">
+                    Aktif: {currentActivity.type}
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    Başlangıç: {formatDate(currentActivity.startTime)}
+                  </p>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -442,15 +463,15 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                       <span className="text-sm font-medium">{activity.label}</span>
                       <Button
                         onClick={() => handleStartActivity(activity.key, activity.label)}
-                        disabled={loadingActivity === activity.key || activeActivities[activity.key] !== null}
+                        disabled={loadingActivity === activity.key || currentActivity !== null}
                         size="sm"
                         className="min-w-[80px]"
                         data-testid={`button-start-${activity.key}`}
                       >
                         {loadingActivity === activity.key ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : activeActivities[activity.key] ? (
-                          "Aktif"
+                        ) : currentActivityKey === activity.key ? (
+                          <Badge variant="secondary">Aktif</Badge>
                         ) : (
                           <>
                             <Play className="mr-1 h-3 w-3" />
@@ -470,8 +491,8 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                       <span className="text-sm font-medium">{activity.label}</span>
                       <Button
                         onClick={() => handleEndActivity(activity.key, activity.label)}
-                        disabled={loadingActivity === activity.key}
-                        variant="destructive"
+                        disabled={loadingActivity === activity.key || currentActivityKey !== activity.key}
+                        variant={currentActivityKey === activity.key ? "destructive" : "outline"}
                         size="sm"
                         className="min-w-[80px]"
                         data-testid={`button-end-${activity.key}`}
@@ -539,7 +560,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                         </p>
                       </div>
                     </div>
-                    <Badge variant="secondary">
+                    <Badge variant={activity.endTime ? "secondary" : "default"}>
                       {activity.durationMinutes ? `${activity.durationMinutes} dk` : "Devam ediyor"}
                     </Badge>
                   </div>
