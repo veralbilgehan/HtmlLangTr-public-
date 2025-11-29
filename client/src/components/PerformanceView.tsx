@@ -33,10 +33,10 @@ interface Shift {
 }
 
 const ACTIVITY_TYPES = [
-  { key: "customer", label: "Müşteri Görüşmesi" },
-  { key: "phone", label: "Telefon Görüşmesi" },
-  { key: "vehicle", label: "Araç Teslimatı" },
-  { key: "other", label: "Diğer" },
+  { key: "customer", label: "Müşteri Görüşmesi", points: 10 },
+  { key: "phone", label: "Telefon Görüşmesi", points: 5 },
+  { key: "vehicle", label: "Araç Teslimatı", points: 15 },
+  { key: "other", label: "Diğer", points: 3 },
 ];
 
 export default function PerformanceView({ user }: PerformanceViewProps) {
@@ -584,11 +584,11 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
           </Card>
         </div>
 
-        {/* Today's Summary - Right Column */}
+        {/* Performance Summary - Right Column */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Günlük Özet</CardTitle>
+              <CardTitle>Mesai Bilgisi</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -611,6 +611,64 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
           </Card>
         </div>
       </div>
+
+      {/* Daily Performance Measurement - Bottom */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Günlük Performans Ölçümü</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-slate-50">
+                  <th className="text-left p-3 font-semibold">Aktivite Türü</th>
+                  <th className="text-center p-3 font-semibold">Adet</th>
+                  <th className="text-center p-3 font-semibold">Puan</th>
+                  <th className="text-center p-3 font-semibold">Toplam Puan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ACTIVITY_TYPES.map((activityType) => {
+                  const count = activities.filter(
+                    (a) => a.type === activityType.label && a.endTime
+                  ).length;
+                  const totalPoints = count * activityType.points;
+                  return (
+                    <tr key={activityType.key} className="border-b hover:bg-slate-50">
+                      <td className="p-3" data-testid={`perf-label-${activityType.key}`}>
+                        {activityType.label}
+                      </td>
+                      <td className="text-center p-3" data-testid={`perf-count-${activityType.key}`}>
+                        {count}
+                      </td>
+                      <td className="text-center p-3 text-muted-foreground" data-testid={`perf-points-${activityType.key}`}>
+                        {activityType.points}
+                      </td>
+                      <td className="text-center p-3 font-semibold text-primary" data-testid={`perf-total-${activityType.key}`}>
+                        {totalPoints}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="bg-primary/10 font-bold">
+                  <td className="p-3" colSpan={3}>Günlük Toplam Performans</td>
+                  <td className="text-center p-3 text-primary text-lg" data-testid="perf-grand-total">
+                    {ACTIVITY_TYPES.reduce((total, activityType) => {
+                      const count = activities.filter(
+                        (a) => a.type === activityType.label && a.endTime
+                      ).length;
+                      return total + count * activityType.points;
+                    }, 0)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
