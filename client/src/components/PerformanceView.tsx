@@ -280,6 +280,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
         const data = await response.json();
         setCurrentActivity(data.activity);
         setCurrentActivityKey(activityKey);
+        await fetchActivities();
         toast({
           title: "Aktivite Başladı",
           description: `${activityLabel} kaydediliyor`,
@@ -304,12 +305,19 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
   };
 
   const handleEndActivity = async (activityKey: string, activityLabel: string) => {
-    if (!currentActivity || currentActivityKey !== activityKey) {
+    if (!currentActivity) {
       toast({
         title: "Uyarı",
-        description: currentActivity 
-          ? `Şu anda aktif olan aktivite: ${currentActivity.type}` 
-          : `Önce ${activityLabel} aktivitesini başlatmalısınız`,
+        description: `Önce ${activityLabel} aktivitesini başlatmalısınız`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (currentActivityKey !== activityKey) {
+      toast({
+        title: "Uyarı",
+        description: `Şu anda aktif olan aktivite: ${currentActivity.type}`,
         variant: "destructive",
       });
       return;
@@ -338,6 +346,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
         setCurrentActivity(null);
         setCurrentActivityKey(null);
         await fetchActivities();
+        await fetchActiveActivity();
 
         toast({
           title: "Aktivite Tamamlandı",
