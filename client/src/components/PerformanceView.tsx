@@ -146,7 +146,7 @@ export default function PerformanceView() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
-                <Label>Kategori</Label>
+                <Label>Aktivite Başlat</Label>
                 <Select 
                   value={newActivity.type} 
                   onValueChange={(v) => setNewActivity({...newActivity, type: v})}
@@ -155,18 +155,16 @@ export default function PerformanceView() {
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Yazılım">Yazılım Geliştirme</SelectItem>
-                    <SelectItem value="Tasarım">Tasarım</SelectItem>
-                    <SelectItem value="Toplantı">Toplantı</SelectItem>
-                    <SelectItem value="Destek">Müşteri Destek</SelectItem>
-                    <SelectItem value="Arge">Ar-Ge</SelectItem>
+                    <SelectItem value="Yüz yüze Müşteri görüşmesi">Yüz yüze Müşteri görüşmesi</SelectItem>
+                    <SelectItem value="Telefondan müşteri görüşmesi">Telefondan müşteri görüşmesi</SelectItem>
+                    <SelectItem value="Araç teslimatı">Araç teslimatı</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Açıklama</Label>
+                <Label>Değerlendirme</Label>
                 <Input 
-                  placeholder="Ne üzerinde çalışıyorsunuz?" 
+                  placeholder="Görüşme notları..." 
                   value={newActivity.desc}
                   onChange={(e) => setNewActivity({...newActivity, desc: e.target.value})}
                 />
@@ -174,7 +172,7 @@ export default function PerformanceView() {
             </div>
             <div className="flex justify-end">
                <Button onClick={handleAddActivity} className="w-full md:w-auto">
-                 <Plus className="mr-2 h-4 w-4" /> Aktivite Ekle
+                 <Plus className="mr-2 h-4 w-4" /> Aktivite Bitir
                </Button>
             </div>
           </CardContent>
