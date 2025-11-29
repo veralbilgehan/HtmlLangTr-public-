@@ -2,7 +2,13 @@ import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, Activity, MessageSquare, Settings, Users, Building2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { LogOut, LayoutDashboard, Activity, MessageSquare, Settings, Users, Building2, ChevronDown } from "lucide-react";
 import DashboardHome from "@/components/DashboardHome";
 import PerformanceView from "@/components/PerformanceView";
 import ChatInterface from "@/components/ChatInterface";
@@ -136,47 +142,49 @@ export default function Dashboard() {
             <MessageSquare className="h-4 w-4 mr-2" /> Sohbet
           </button>
           
-          {/* Manager/Admin tabs */}
+          {/* Manager/Admin Dropdown */}
           {isManager && (
-            <button
-              onClick={() => setActiveTab("users")}
-              data-testid="tab-users"
-              className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
-                activeTab === "users" 
-                  ? "border-primary text-primary bg-blue-50/50" 
-                  : "border-transparent text-muted-foreground hover:bg-slate-50"
-              }`}
-            >
-              <Users className="h-4 w-4 mr-2" /> Kullanıcılar
-            </button>
-          )}
-          
-          {isSuperAdmin && (
-            <button
-              onClick={() => setActiveTab("companies")}
-              data-testid="tab-companies"
-              className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
-                activeTab === "companies" 
-                  ? "border-primary text-primary bg-blue-50/50" 
-                  : "border-transparent text-muted-foreground hover:bg-slate-50"
-              }`}
-            >
-              <Building2 className="h-4 w-4 mr-2" /> Şirketler
-            </button>
-          )}
-          
-          {isManager && (
-            <button
-              onClick={() => setActiveTab("settings")}
-              data-testid="tab-settings"
-              className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
-                activeTab === "settings" 
-                  ? "border-primary text-primary bg-blue-50/50" 
-                  : "border-transparent text-muted-foreground hover:bg-slate-50"
-              }`}
-            >
-              <Settings className="h-4 w-4 mr-2" /> Ayarlar
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  data-testid="dropdown-management"
+                  className={`flex items-center px-6 py-4 font-medium transition-colors border-b-2 whitespace-nowrap ${
+                    activeTab === "users" || activeTab === "companies" || activeTab === "settings"
+                      ? "border-primary text-primary bg-blue-50/50" 
+                      : "border-transparent text-muted-foreground hover:bg-slate-50"
+                  }`}
+                >
+                  <Settings className="h-4 w-4 mr-2" /> 
+                  Yönetim
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem 
+                  onClick={() => setActiveTab("users")}
+                  data-testid="menu-users"
+                  className={activeTab === "users" ? "bg-blue-50 text-primary" : ""}
+                >
+                  <Users className="h-4 w-4 mr-2" /> Kullanıcılar
+                </DropdownMenuItem>
+                {isSuperAdmin && (
+                  <DropdownMenuItem 
+                    onClick={() => setActiveTab("companies")}
+                    data-testid="menu-companies"
+                    className={activeTab === "companies" ? "bg-blue-50 text-primary" : ""}
+                  >
+                    <Building2 className="h-4 w-4 mr-2" /> Şirketler
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem 
+                  onClick={() => setActiveTab("settings")}
+                  data-testid="menu-settings"
+                  className={activeTab === "settings" ? "bg-blue-50 text-primary" : ""}
+                >
+                  <Settings className="h-4 w-4 mr-2" /> Ayarlar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </nav>
 
