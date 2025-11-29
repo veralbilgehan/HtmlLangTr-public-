@@ -37,39 +37,44 @@ export default function PerformanceView() {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const handleStartShift = () => {
-    setIsShiftActive(true);
-    toast({
-      title: "Mesai Başladı",
-      description: "İyi çalışmalar! Süreniz işlemeye başladı.",
-      className: "bg-green-500 text-white border-none",
-    });
-  };
+  const [dailyStats, setDailyStats] = useState({
+    "Yüz yüze Müşteri görüşmesi": 125, // in minutes
+    "Telefondan müşteri görüşmesi": 45,
+    "Araç teslimatı": 90
+  });
 
-  const handleEndShift = () => {
-    setIsShiftActive(false);
-    toast({
-      title: "Mesai Bitti",
-      description: `Toplam çalışma süresi: ${formatTime(shiftDuration)}`,
-      variant: "destructive",
-    });
-  };
-
-  const handleAddActivity = () => {
-    if (!newActivity.type || !newActivity.desc) return;
+  const handleEndActivity = (type: string) => {
+    if (!newActivity.desc) {
+      toast({ title: "Hata", description: "Lütfen bir değerlendirme seçiniz.", variant: "destructive" });
+      return;
+    }
+    
+    const duration = Math.floor(Math.random() * 60) + 15; // Mock duration
     
     setActivities([
-      ...activities,
       {
         id: Date.now(),
-        type: newActivity.type,
+        type: type,
         desc: newActivity.desc,
-        duration: "00:00:00",
-        points: 0
-      }
+        duration: `${Math.floor(duration / 60).toString().padStart(2, '0')}:${(duration % 60).toString().padStart(2, '0')}:00`,
+        points: 10
+      },
+      ...activities
     ]);
+    
+    setDailyStats(prev => ({
+      ...prev,
+      [type]: (prev[type as keyof typeof prev] || 0) + duration
+    }));
+
     setNewActivity({ type: "", desc: "" });
-    toast({ title: "Aktivite Eklendi" });
+    toast({ title: "Aktivite Tamamlandı", description: `${type} başarıyla kaydedildi.` });
+  };
+
+  const formatDuration = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h}s ${m}dk`;
   };
 
   return (
@@ -95,16 +100,15 @@ export default function PerformanceView() {
             
             <div className="grid grid-cols-2 gap-3">
               <Button 
-                onClick={handleStartShift} 
-                disabled={isShiftActive}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                disabled={true}
+                className="bg-green-600 hover:bg-green-700 text-white opacity-50 cursor-not-allowed"
               >
                 <Play className="mr-2 h-4 w-4" /> Başlat
               </Button>
               <Button 
-                onClick={handleEndShift} 
-                disabled={!isShiftActive}
+                disabled={true}
                 variant="destructive"
+                className="opacity-50 cursor-not-allowed"
               >
                 <Square className="mr-2 h-4 w-4 fill-current" /> Bitir
               </Button>
@@ -141,39 +145,69 @@ export default function PerformanceView() {
       <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Aktivite Girişi</CardTitle>
+            <CardTitle>Aktivite Yönetimi</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="space-y-2">
-                <Label>Aktivite Başlat</Label>
-                <Select 
-                  value={newActivity.type} 
-                  onValueChange={(v) => setNewActivity({...newActivity, type: v})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seçiniz" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Yüz yüze Müşteri görüşmesi">Yüz yüze Müşteri görüşmesi</SelectItem>
-                    <SelectItem value="Telefondan müşteri görüşmesi">Telefondan müşteri görüşmesi</SelectItem>
-                    <SelectItem value="Araç teslimatı">Araç teslimatı</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Değerlendirme</Label>
-                <Input 
-                  placeholder="Görüşme notları..." 
-                  value={newActivity.desc}
-                  onChange={(e) => setNewActivity({...newActivity, desc: e.target.value})}
-                />
-              </div>
+          <CardContent className="space-y-6">
+            {/* Değerlendirme Dropdown */}
+            <div className="space-y-2">
+              <Label>Değerlendirme Seçiniz</Label>
+              <Select 
+                value={newActivity.desc} 
+                onValueChange={(v) => setNewActivity({...newActivity, desc: v})}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Görüşme sonucu seçiniz..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Olumlu">Olumlu</SelectItem>
+                  <SelectItem value="Olumsuz">Olumsuz</SelectItem>
+                  <SelectItem value="Satış Gerçekleşti">Satış Gerçekleşti</SelectItem>
+                  <SelectItem value="Bilgi Verildi">Bilgi Verildi</SelectItem>
+                  <SelectItem value="Teklif Bekleniyor">Teklif Bekleniyor</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex justify-end">
-               <Button onClick={handleAddActivity} className="w-full md:w-auto">
-                 <Plus className="mr-2 h-4 w-4" /> Aktivite Bitir
-               </Button>
+
+            {/* Action Buttons Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex flex-col gap-3 text-center hover:shadow-md transition-all">
+                <div className="font-medium text-blue-900">Yüz Yüze Görüşme</div>
+                <Button 
+                  onClick={() => handleEndActivity("Yüz yüze Müşteri görüşmesi")}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  Bitir
+                </Button>
+                <div className="text-xs text-blue-600 font-medium mt-1 pt-2 border-t border-blue-200">
+                  Günlük Süre: {formatDuration(dailyStats["Yüz yüze Müşteri görüşmesi"])}
+                </div>
+              </div>
+
+              <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 flex flex-col gap-3 text-center hover:shadow-md transition-all">
+                <div className="font-medium text-purple-900">Telefon Görüşmesi</div>
+                <Button 
+                  onClick={() => handleEndActivity("Telefondan müşteri görüşmesi")}
+                  className="w-full bg-purple-600 hover:bg-purple-700"
+                >
+                  Bitir
+                </Button>
+                <div className="text-xs text-purple-600 font-medium mt-1 pt-2 border-t border-purple-200">
+                  Günlük Süre: {formatDuration(dailyStats["Telefondan müşteri görüşmesi"])}
+                </div>
+              </div>
+
+              <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 flex flex-col gap-3 text-center hover:shadow-md transition-all">
+                <div className="font-medium text-orange-900">Araç Teslimatı</div>
+                <Button 
+                  onClick={() => handleEndActivity("Araç teslimatı")}
+                  className="w-full bg-orange-600 hover:bg-orange-700"
+                >
+                  Bitir
+                </Button>
+                <div className="text-xs text-orange-600 font-medium mt-1 pt-2 border-t border-orange-200">
+                  Günlük Süre: {formatDuration(dailyStats["Araç teslimatı"])}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
