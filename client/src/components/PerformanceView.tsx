@@ -445,9 +445,9 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Activity Management - Left Column */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="space-y-6">
+        {/* Activity Management */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Aktivite Yönetimi</CardTitle>
@@ -584,32 +584,6 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
           </Card>
         </div>
 
-        {/* Performance Summary - Right Column */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Mesai Bilgisi</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Toplam Aktivite</span>
-                  <span className="font-semibold" data-testid="text-total-activities">{activities.length}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tamamlanan</span>
-                  <span className="font-semibold" data-testid="text-completed-activities">
-                    {activities.filter((a) => a.endTime).length}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Mesai Süresi</span>
-                  <span className="font-semibold" data-testid="text-shift-time">{formatTime(shiftDuration)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
 
       {/* Daily Performance Measurement - Bottom */}
