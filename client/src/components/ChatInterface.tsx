@@ -403,8 +403,8 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         </div>
       )}
 
-      {/* Sidebar */}
-      <div className="w-64 md:w-80 bg-slate-50 border-r flex flex-col shrink-0">
+      {/* Sidebar - Rehber */}
+      <div className="w-48 bg-slate-50 border-r flex flex-col shrink-0">
         <div className="p-4 border-b bg-white">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -456,8 +456,8 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         </div>
       </div>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-white min-w-0">
+      {/* Main Chat Area - Sohbet */}
+      <div className="w-48 flex flex-col bg-white min-w-0">
         {activeUser ? (
           <>
             <div className="p-4 border-b flex items-center justify-between bg-white shrink-0">
