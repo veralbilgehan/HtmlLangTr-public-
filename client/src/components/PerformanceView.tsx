@@ -45,7 +45,6 @@ interface ActivityType {
 export default function PerformanceView({ user }: PerformanceViewProps) {
   const { toast } = useToast();
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
-  const [shiftDuration, setShiftDuration] = useState(0);
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
@@ -89,18 +88,6 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
     fetchActiveActivity();
   }, []);
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (activeShift && !activeShift.endTime) {
-      interval = setInterval(() => {
-        const start = new Date(activeShift.startTime).getTime();
-        const now = Date.now();
-        const seconds = Math.floor((now - start) / 1000);
-        setShiftDuration(seconds);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [activeShift]);
 
   const fetchActiveShift = async () => {
     try {
@@ -110,11 +97,6 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
       if (response.ok) {
         const data = await response.json();
         setActiveShift(data.shift);
-        if (data.shift) {
-          const start = new Date(data.shift.startTime).getTime();
-          const now = Date.now();
-          setShiftDuration(Math.floor((now - start) / 1000));
-        }
       }
     } catch (error) {
       console.error("Error fetching active shift:", error);
@@ -153,12 +135,6 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-  };
 
   const getLocation = (): Promise<{ latitude: number; longitude: number }> => {
     return new Promise((resolve, reject) => {
@@ -216,7 +192,6 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
       if (response.ok) {
         const data = await response.json();
         setActiveShift(data.shift);
-        setShiftDuration(0);
         toast({
           title: "Mesai Başladı",
           description: `Konum: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`,
@@ -257,10 +232,11 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
       
       if (response.ok) {
         const data = await response.json();
-        setActiveShift(null);
+        setActiveShift(data.shift);
+        fetchActiveShift();
         toast({
           title: "Mesai Bitti",
-          description: `Süre: ${formatTime(data.shift.durationSeconds)} - Konum: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`,
+          description: `Konum: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`,
         });
       } else {
         const error = await response.json();
@@ -430,27 +406,60 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
     return currentActivity?.type === activityName;
   };
 
+  const formatTimeOnly = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString("tr-TR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatDuration = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    return `${hrs} saat ${mins} dakika`;
+  };
+
   return (
     <div className="space-y-4 overflow-hidden">
       {/* Shift Controls */}
       <Card>
-        <CardHeader>
-          <CardTitle>Mesai Kontrolü</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Mesai Kontrolü</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold" data-testid="text-shift-status">
+            <div className="space-y-1">
+              <Badge variant={activeShift && !activeShift.endTime ? "default" : "secondary"} data-testid="text-shift-status">
                 {activeShift && !activeShift.endTime ? "Mesai Aktif" : "Mesai Dışı"}
-              </h3>
-              <p className="text-xs sm:text-sm text-muted-foreground" data-testid="text-shift-duration">
-                Toplam Süre: {formatTime(shiftDuration)}
-              </p>
-              {activeShift && activeShift.startLatitude && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                  <MapPin className="h-3 w-3" />
-                  <span className="truncate max-w-[200px]">Başlangıç: {formatCoordinates(activeShift.startLatitude, activeShift.startLongitude)}</span>
-                </p>
+              </Badge>
+              
+              {activeShift && (
+                <div className="text-xs text-muted-foreground space-y-1 mt-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-3 w-3" />
+                    <span>Başlangıç: {formatTimeOnly(activeShift.startTime)}</span>
+                  </div>
+                  {activeShift.startLatitude && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3 w-3" />
+                      <span className="truncate max-w-[180px]">{formatCoordinates(activeShift.startLatitude, activeShift.startLongitude)}</span>
+                    </div>
+                  )}
+                  {activeShift.endTime && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-3 w-3" />
+                        <span>Bitiş: {formatTimeOnly(activeShift.endTime)}</span>
+                      </div>
+                      {activeShift.durationSeconds && (
+                        <div className="font-medium text-primary">
+                          Süre: {formatDuration(activeShift.durationSeconds)}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               )}
             </div>
             <Button
@@ -479,7 +488,6 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
               )}
             </Button>
           </div>
-          <Progress value={(shiftDuration / 28800) * 100} className="h-2" />
         </CardContent>
       </Card>
 
@@ -627,33 +635,33 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
 
         {/* Recent Activities */}
         <Card>
-          <CardHeader>
-            <CardTitle>Son Aktiviteler</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Son Aktiviteler</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="space-y-2">
               {activities.slice(0, 6).map((activity) => (
                 <div
                   key={activity.id}
-                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                  className="p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
                   data-testid={`activity-${activity.id}`}
                 >
-                  <div className="flex items-center gap-3">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium text-sm">{activity.type}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(activity.startTime)}
-                      </p>
-                    </div>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-medium text-sm">{activity.type}</p>
+                    <Badge variant={activity.endTime ? "secondary" : "default"} className="text-xs">
+                      {activity.durationMinutes ? `${activity.durationMinutes} dk` : "Devam"}
+                    </Badge>
                   </div>
-                  <Badge variant={activity.endTime ? "secondary" : "default"}>
-                    {activity.durationMinutes ? `${activity.durationMinutes} dk` : "Devam"}
-                  </Badge>
+                  <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
+                    <span>Başlangıç: {formatTimeOnly(activity.startTime)}</span>
+                    {activity.endTime && (
+                      <span>Bitiş: {formatTimeOnly(activity.endTime)}</span>
+                    )}
+                  </div>
                 </div>
               ))}
               {activities.length === 0 && (
-                <p className="text-center text-muted-foreground text-sm py-8 col-span-full">
+                <p className="text-center text-muted-foreground text-sm py-4">
                   Henüz aktivite kaydı yok
                 </p>
               )}

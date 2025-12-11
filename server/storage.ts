@@ -9,7 +9,7 @@ import {
   type SalesRecord, type InsertSalesRecord
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, desc, isNull } from "drizzle-orm";
+import { eq, and, or, desc, isNull, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // Companies
@@ -38,12 +38,14 @@ export interface IStorage {
   updateShift(id: string, updates: Partial<Shift>): Promise<Shift | undefined>;
   getActiveShift(userId: string): Promise<Shift | undefined>;
   getUserShifts(userId: string): Promise<Shift[]>;
+  getAllShifts(companyId: string | null): Promise<Shift[]>;
   
   // Activities
   createActivity(activity: InsertActivity): Promise<Activity>;
   updateActivity(id: string, updates: Partial<Activity>): Promise<Activity | undefined>;
   getActiveActivity(userId: string): Promise<Activity | undefined>;
   getUserActivities(userId: string): Promise<Activity[]>;
+  getAllActivities(companyId: string | null): Promise<Activity[]>;
   
   // Sales Records
   createSalesRecord(record: InsertSalesRecord): Promise<SalesRecord>;
@@ -184,6 +186,23 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(shifts.startTime));
   }
 
+  async getAllShifts(companyId: string | null): Promise<Shift[]> {
+    if (companyId) {
+      const companyUsers = await db.select({ id: users.id }).from(users).where(eq(users.companyId, companyId));
+      const userIds = companyUsers.map(u => u.id);
+      if (userIds.length === 0) return [];
+      return await db
+        .select()
+        .from(shifts)
+        .where(inArray(shifts.userId, userIds))
+        .orderBy(desc(shifts.startTime));
+    }
+    return await db
+      .select()
+      .from(shifts)
+      .orderBy(desc(shifts.startTime));
+  }
+
   // Activities
   async createActivity(insertActivity: InsertActivity): Promise<Activity> {
     const [activity] = await db.insert(activities).values(insertActivity).returning();
@@ -215,6 +234,23 @@ export class DatabaseStorage implements IStorage {
       .from(activities)
       .where(eq(activities.userId, userId))
       .orderBy(desc(activities.createdAt));
+  }
+
+  async getAllActivities(companyId: string | null): Promise<Activity[]> {
+    if (companyId) {
+      const companyUsers = await db.select({ id: users.id }).from(users).where(eq(users.companyId, companyId));
+      const userIds = companyUsers.map(u => u.id);
+      if (userIds.length === 0) return [];
+      return await db
+        .select()
+        .from(activities)
+        .where(inArray(activities.userId, userIds))
+        .orderBy(desc(activities.startTime));
+    }
+    return await db
+      .select()
+      .from(activities)
+      .orderBy(desc(activities.startTime));
   }
 
   // Sales Records

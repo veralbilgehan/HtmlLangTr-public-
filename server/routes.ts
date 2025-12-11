@@ -644,7 +644,6 @@ export async function registerRoutes(
   app.get("/api/users", requireAuth, async (req: any, res) => {
     try {
       const users = await storage.getAllUsers();
-      // Don't send passwords
       const sanitizedUsers = users.map(u => ({
         id: u.id,
         username: u.username,
@@ -657,6 +656,79 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get users error:", error);
       res.status(500).json({ message: "Kullanıcılar alınamadı" });
+    }
+  });
+
+  // Report routes (manager only)
+  app.get("/api/reports/shifts", requireAuth, async (req: any, res) => {
+    try {
+      const { userId, dateFilter } = req.query;
+      const user = req.user;
+      
+      if (user.role !== 'manager' && user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Yetkiniz yok" });
+      }
+
+      let shifts = await storage.getAllShifts(user.companyId);
+      
+      if (userId && userId !== 'all') {
+        shifts = shifts.filter(s => s.userId === userId);
+      }
+
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfWeek = new Date(startOfDay);
+      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      if (dateFilter === 'today') {
+        shifts = shifts.filter(s => new Date(s.startTime) >= startOfDay);
+      } else if (dateFilter === 'week') {
+        shifts = shifts.filter(s => new Date(s.startTime) >= startOfWeek);
+      } else if (dateFilter === 'month') {
+        shifts = shifts.filter(s => new Date(s.startTime) >= startOfMonth);
+      }
+
+      res.json({ shifts });
+    } catch (error) {
+      console.error("Get report shifts error:", error);
+      res.status(500).json({ message: "Mesai verileri alınamadı" });
+    }
+  });
+
+  app.get("/api/reports/activities", requireAuth, async (req: any, res) => {
+    try {
+      const { userId, dateFilter } = req.query;
+      const user = req.user;
+      
+      if (user.role !== 'manager' && user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Yetkiniz yok" });
+      }
+
+      let activities = await storage.getAllActivities(user.companyId);
+      
+      if (userId && userId !== 'all') {
+        activities = activities.filter(a => a.userId === userId);
+      }
+
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfWeek = new Date(startOfDay);
+      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      if (dateFilter === 'today') {
+        activities = activities.filter(a => new Date(a.startTime) >= startOfDay);
+      } else if (dateFilter === 'week') {
+        activities = activities.filter(a => new Date(a.startTime) >= startOfWeek);
+      } else if (dateFilter === 'month') {
+        activities = activities.filter(a => new Date(a.startTime) >= startOfMonth);
+      }
+
+      res.json({ activities });
+    } catch (error) {
+      console.error("Get report activities error:", error);
+      res.status(500).json({ message: "Aktivite verileri alınamadı" });
     }
   });
 

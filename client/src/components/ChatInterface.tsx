@@ -423,29 +423,18 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
               key={chatUser.id}
               onClick={() => setActiveUser(chatUser)}
               className={cn(
-                "p-4 flex items-center gap-3 cursor-pointer hover:bg-slate-100 transition-colors border-b border-slate-100",
+                "p-3 cursor-pointer hover:bg-slate-100 transition-colors border-b border-slate-100",
                 activeUser?.id === chatUser.id && "bg-blue-50 hover:bg-blue-50"
               )}
               data-testid={`user-${chatUser.id}`}
             >
-              <div className="relative">
-                <Avatar>
-                  {chatUser.avatar ? (
-                    <AvatarImage src={chatUser.avatar} />
-                  ) : (
-                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                      {getInitials(chatUser.fullName)}
-                    </AvatarFallback>
-                  )}
-                </Avatar>
-                <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white bg-green-500" />
-              </div>
-              <div className="flex-1 overflow-hidden">
+              <div className="flex items-center justify-between">
                 <h4 className="font-medium text-sm truncate">{chatUser.fullName}</h4>
-                <p className="text-xs text-muted-foreground truncate">
-                  {chatUser.department || chatUser.role}
-                </p>
+                <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
               </div>
+              <p className="text-xs text-muted-foreground truncate mt-1">
+                {chatUser.department || chatUser.role}
+              </p>
             </div>
           ))}
           {filteredUsers.length === 0 && (
@@ -460,17 +449,8 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
       <div className="w-full md:w-3/4 h-2/3 md:h-full flex flex-col bg-white min-w-0">
         {activeUser ? (
           <>
-            <div className="p-4 border-b flex items-center justify-between bg-white shrink-0">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  {activeUser.avatar ? (
-                    <AvatarImage src={activeUser.avatar} />
-                  ) : (
-                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                      {getInitials(activeUser.fullName)}
-                    </AvatarFallback>
-                  )}
-                </Avatar>
+            <div className="p-3 border-b flex items-center justify-between bg-white shrink-0">
+              <div className="flex items-center gap-2">
                 <div>
                   <h3 className="font-bold text-sm">{activeUser.fullName}</h3>
                   <p className="text-xs text-green-600 flex items-center gap-1">
@@ -575,34 +555,33 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Selected file/image preview */}
-            {selectedFile && (
-              <div className="px-3 py-2 bg-blue-50 border-t border-blue-100 flex items-center gap-3 shrink-0">
-                {selectedFile.type.startsWith("image/") ? (
-                  <Image className="h-5 w-5 text-blue-500 shrink-0" />
-                ) : (
-                  <File className="h-5 w-5 text-blue-500 shrink-0" />
-                )}
-                <div className="flex-1 overflow-hidden min-w-0">
-                  <p className="text-sm font-medium truncate">{selectedFile.name}</p>
-                  <p className="text-xs text-muted-foreground">
+            {/* Message input and file controls */}
+            <div className="p-2 bg-white border-t shrink-0">
+              {/* Selected file/image preview */}
+              {selectedFile && (
+                <div className="mb-2 px-2 py-2 bg-blue-50 rounded-lg flex items-center gap-2">
+                  {selectedFile.type.startsWith("image/") ? (
+                    <Image className="h-4 w-4 text-blue-500 shrink-0" />
+                  ) : (
+                    <File className="h-4 w-4 text-blue-500 shrink-0" />
+                  )}
+                  <span className="text-xs font-medium truncate flex-1">{selectedFile.name}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">
                     {formatFileSize(selectedFile.size)}
-                  </p>
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={clearSelectedFile}
+                    className="h-6 w-6 shrink-0"
+                    data-testid="button-clear-file"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={clearSelectedFile}
-                  className="h-8 w-8 shrink-0"
-                  data-testid="button-clear-file"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-
-            <div className="p-3 bg-white border-t shrink-0">
-              <div className="flex items-center gap-2">
+              )}
+              
+              <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -628,14 +607,14 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                   onChange={(e) => setMessageInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
                   placeholder="Mesaj yazın..."
-                  className="flex-1 min-w-0 rounded-full bg-slate-50 border-slate-200 text-sm h-9"
+                  className="flex-1 min-w-0 rounded-full bg-slate-50 border-slate-200 text-sm h-8"
                   disabled={isSending}
                   data-testid="input-message"
                 />
                 <Button
                   onClick={handleSend}
                   size="icon"
-                  className="rounded-full h-8 w-8 shrink-0"
+                  className="rounded-full h-8 w-8 shrink-0 bg-primary"
                   disabled={isSending || (!messageInput.trim() && !selectedFile)}
                   data-testid="button-send-message"
                 >
@@ -647,7 +626,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                 </Button>
               </div>
               {isUploading && (
-                <p className="text-xs text-muted-foreground text-center mt-2">
+                <p className="text-xs text-muted-foreground text-center mt-1">
                   Dosya yükleniyor...
                 </p>
               )}
