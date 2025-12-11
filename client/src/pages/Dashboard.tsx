@@ -70,38 +70,38 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden min-h-[85vh] flex flex-col">
         {/* Header */}
-        <header className="bg-primary text-primary-foreground p-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold" data-testid="text-company-name">
+        <header className="bg-primary text-primary-foreground p-3 md:p-6 flex flex-col sm:flex-row justify-between items-center gap-2 md:gap-4">
+          <div className="text-center sm:text-left">
+            <h1 className="text-lg md:text-2xl font-bold" data-testid="text-company-name">
               {company?.name || (isSuperAdmin ? "Sistem Yönetimi" : "Şirket Portalı")}
             </h1>
-            <p className="text-primary-foreground/80 text-sm" data-testid="text-welcome">
+            <p className="text-primary-foreground/80 text-xs md:text-sm" data-testid="text-welcome">
               {user.fullName} - {getRoleLabel(user.role)}
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm">
-              <Avatar className="h-8 w-8 border-2 border-white/20">
+          <div className="flex items-center gap-2 md:gap-4">
+            <div className="hidden sm:flex items-center gap-2 md:gap-3 bg-white/10 px-3 md:px-4 py-2 rounded-full backdrop-blur-sm">
+              <Avatar className="h-6 w-6 md:h-8 md:w-8 border-2 border-white/20">
                 {user.avatar ? (
                   <AvatarImage src={user.avatar} alt={user.fullName} />
                 ) : null}
-                <AvatarFallback className="bg-white text-primary font-bold">
+                <AvatarFallback className="bg-white text-primary font-bold text-xs md:text-sm">
                   {getInitials(user.fullName)}
                 </AvatarFallback>
               </Avatar>
-              <div className="text-sm">
+              <div className="text-xs md:text-sm">
                 <p className="font-medium leading-none" data-testid="text-fullname">{user.fullName}</p>
-                <p className="text-xs opacity-80" data-testid="text-department">{user.department || getRoleLabel(user.role)}</p>
+                <p className="text-[10px] md:text-xs opacity-80" data-testid="text-department">{user.department || getRoleLabel(user.role)}</p>
               </div>
             </div>
             <Button 
               variant="destructive" 
               size="sm" 
               onClick={handleLogout}
-              className="shadow-lg hover:bg-red-600"
+              className="shadow-lg hover:bg-red-600 text-xs md:text-sm px-2 md:px-3"
               data-testid="button-logout"
             >
-              <LogOut className="h-4 w-4 mr-2" /> Çıkış
+              <LogOut className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" /> Çıkış
             </Button>
           </div>
         </header>

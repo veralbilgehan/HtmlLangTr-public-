@@ -322,7 +322,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="flex h-[500px] max-h-[70vh] border rounded-lg overflow-hidden bg-white shadow-sm relative">
+    <div className="flex flex-col md:flex-row h-[70vh] md:h-[500px] md:max-h-[70vh] border rounded-lg overflow-hidden bg-white shadow-sm relative">
       {/* Hidden elements */}
       <input
         type="file"
@@ -404,7 +404,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
       )}
 
       {/* Sidebar - Rehber (1/4) */}
-      <div className="w-1/4 bg-slate-50 border-r flex flex-col shrink-0">
+      <div className="w-full md:w-1/4 h-1/3 md:h-full bg-slate-50 border-b md:border-b-0 md:border-r flex flex-col shrink-0">
         <div className="p-4 border-b bg-white">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -457,7 +457,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
       </div>
 
       {/* Main Chat Area - Sohbet (3/4) */}
-      <div className="w-3/4 flex flex-col bg-white min-w-0">
+      <div className="w-full md:w-3/4 h-2/3 md:h-full flex flex-col bg-white min-w-0">
         {activeUser ? (
           <>
             <div className="p-4 border-b flex items-center justify-between bg-white shrink-0">

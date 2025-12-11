@@ -438,41 +438,42 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
           <CardTitle>Mesai Kontrolü</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-lg font-semibold" data-testid="text-shift-status">
+              <h3 className="text-base sm:text-lg font-semibold" data-testid="text-shift-status">
                 {activeShift && !activeShift.endTime ? "Mesai Aktif" : "Mesai Dışı"}
               </h3>
-              <p className="text-sm text-muted-foreground" data-testid="text-shift-duration">
+              <p className="text-xs sm:text-sm text-muted-foreground" data-testid="text-shift-duration">
                 Toplam Süre: {formatTime(shiftDuration)}
               </p>
               {activeShift && activeShift.startLatitude && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                   <MapPin className="h-3 w-3" />
-                  Başlangıç: {formatCoordinates(activeShift.startLatitude, activeShift.startLongitude)}
+                  <span className="truncate max-w-[200px]">Başlangıç: {formatCoordinates(activeShift.startLatitude, activeShift.startLongitude)}</span>
                 </p>
               )}
             </div>
             <Button
               onClick={activeShift && !activeShift.endTime ? handleEndShift : handleStartShift}
               variant={activeShift && !activeShift.endTime ? "destructive" : "default"}
-              size="lg"
+              size="default"
+              className="w-full sm:w-auto text-sm"
               disabled={isLoadingLocation}
               data-testid={activeShift && !activeShift.endTime ? "button-end-shift" : "button-start-shift"}
             >
               {isLoadingLocation ? (
                 <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Konum Alınıyor...
                 </>
               ) : activeShift && !activeShift.endTime ? (
                 <>
-                  <Square className="mr-2 h-5 w-5" />
+                  <Square className="mr-2 h-4 w-4" />
                   Mesai Bitir
                 </>
               ) : (
                 <>
-                  <Play className="mr-2 h-5 w-5" />
+                  <Play className="mr-2 h-4 w-4" />
                   Mesai Başlat
                 </>
               )}
@@ -512,17 +513,17 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                 activityTypes
                   .filter(at => at.category === 'activity' || at.category === 'other')
                   .map((activityType) => (
-                    <div key={activityType.id} className="flex items-center justify-between gap-2 p-3 bg-slate-50 rounded-lg">
+                    <div key={activityType.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-50 rounded-lg">
                       <div className="flex-1 min-w-0">
                         <span className="text-sm font-medium truncate block">{activityType.name}</span>
                         <span className="text-xs text-muted-foreground">{activityType.points} puan</span>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 w-full sm:w-auto">
                         <Button
                           onClick={() => handleStartActivity(activityType.name)}
                           disabled={loadingActivityName === activityType.name || currentActivity !== null}
                           size="sm"
-                          className="shrink-0 text-xs px-3 h-8"
+                          className="flex-1 sm:flex-none text-xs px-3 h-8"
                           data-testid={`button-start-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}
                         >
                           {loadingActivityName === activityType.name ? (
@@ -541,7 +542,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                           disabled={loadingActivityName === activityType.name || !isCurrentActivityType(activityType.name)}
                           variant={isCurrentActivityType(activityType.name) ? "destructive" : "outline"}
                           size="sm"
-                          className="shrink-0 text-xs px-3 h-8"
+                          className="flex-1 sm:flex-none text-xs px-3 h-8"
                           data-testid={`button-end-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}
                         >
                           {loadingActivityName === activityType.name ? (
@@ -575,17 +576,17 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                 activityTypes
                   .filter(at => at.category === 'sales')
                   .map((activityType) => (
-                    <div key={activityType.id} className="flex items-center justify-between gap-2 p-3 bg-green-50 rounded-lg">
+                    <div key={activityType.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-green-50 rounded-lg">
                       <div className="flex-1 min-w-0">
                         <span className="text-sm font-medium truncate block">{activityType.name}</span>
                         <span className="text-xs text-green-700">{activityType.points} puan</span>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 w-full sm:w-auto">
                         <Button
                           onClick={() => handleStartActivity(activityType.name)}
                           disabled={loadingActivityName === activityType.name || currentActivity !== null}
                           size="sm"
-                          className="shrink-0 text-xs px-3 h-8 bg-green-600 hover:bg-green-700"
+                          className="flex-1 sm:flex-none text-xs px-3 h-8 bg-green-600 hover:bg-green-700"
                           data-testid={`button-start-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}
                         >
                           {loadingActivityName === activityType.name ? (
@@ -604,7 +605,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
                           disabled={loadingActivityName === activityType.name || !isCurrentActivityType(activityType.name)}
                           variant={isCurrentActivityType(activityType.name) ? "destructive" : "outline"}
                           size="sm"
-                          className="shrink-0 text-xs px-3 h-8"
+                          className="flex-1 sm:flex-none text-xs px-3 h-8"
                           data-testid={`button-end-${activityType.name.replace(/\s+/g, '-').toLowerCase()}`}
                         >
                           {loadingActivityName === activityType.name ? (
