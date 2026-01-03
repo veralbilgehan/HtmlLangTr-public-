@@ -732,5 +732,17 @@ export async function registerRoutes(
     }
   });
 
+  // PDF Documentation download
+  app.get("/api/docs/kullanim-kilavuzu", (req, res) => {
+    const filePath = path.join(process.cwd(), "docs", "Kullanim_Kilavuzu.pdf");
+    if (fs.existsSync(filePath)) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="Kullanim_Kilavuzu.pdf"');
+      res.sendFile(filePath);
+    } else {
+      res.status(404).json({ message: "Belge bulunamadı" });
+    }
+  });
+
   return httpServer;
 }
