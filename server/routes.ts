@@ -677,11 +677,11 @@ export async function registerRoutes(
         avatar: u.avatar,
       });
       // Build: partners with messages first (sorted by recency), then the rest
+      const userMap = new Map(allUsers.map(u => [u.id, u]));
       const partnerSet = new Set(partnerIds);
       const partners = partnerIds
-        .map(id => allUsers.find(u => u.id === id))
-        .filter(Boolean)
-        .filter((u: any) => u.id !== userId)
+        .map(id => userMap.get(id))
+        .filter((u): u is NonNullable<typeof u> => !!u && u.id !== userId)
         .map(sanitize);
       const rest = allUsers
         .filter(u => !partnerSet.has(u.id) && u.id !== userId)
