@@ -59,6 +59,7 @@ export interface IStorage {
   markMessageAsRead(id: string): Promise<void>;
   getUserMessages(userId: string): Promise<Message[]>;
   getConversation(user1Id: string, user2Id: string): Promise<Message[]>;
+  getRecentConversationPartnerIds(userId: string): Promise<string[]>;
 
   // Company Settings
   getCompanySettings(companyId: string): Promise<CompanySettings | undefined>;
@@ -322,6 +323,29 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(messages.createdAt);
+  }
+
+  async getRecentConversationPartnerIds(userId: string): Promise<string[]> {
+    const rows = await db
+      .select({
+        senderId: messages.senderId,
+        recipientId: messages.recipientId,
+        createdAt: messages.createdAt,
+      })
+      .from(messages)
+      .where(or(eq(messages.senderId, userId), eq(messages.recipientId, userId)))
+      .orderBy(desc(messages.createdAt));
+
+    const seen = new Set<string>();
+    const partnerIds: string[] = [];
+    for (const row of rows) {
+      const partnerId = row.senderId === userId ? row.recipientId : row.senderId;
+      if (!seen.has(partnerId)) {
+        seen.add(partnerId);
+        partnerIds.push(partnerId);
+      }
+    }
+    return partnerIds;
   }
 
   // Company Settings

@@ -662,6 +662,37 @@ export async function registerRoutes(
     }
   });
 
+  // Returns users the current user has chatted with, sorted by most recent message
+  app.get("/api/conversations", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const partnerIds = await storage.getRecentConversationPartnerIds(userId);
+      const allUsers = await storage.getAllUsers();
+      const sanitize = (u: any) => ({
+        id: u.id,
+        username: u.username,
+        fullName: u.fullName,
+        role: u.role,
+        department: u.department,
+        avatar: u.avatar,
+      });
+      // Build: partners with messages first (sorted by recency), then the rest
+      const partnerSet = new Set(partnerIds);
+      const partners = partnerIds
+        .map(id => allUsers.find(u => u.id === id))
+        .filter(Boolean)
+        .filter((u: any) => u.id !== userId)
+        .map(sanitize);
+      const rest = allUsers
+        .filter(u => !partnerSet.has(u.id) && u.id !== userId)
+        .map(sanitize);
+      res.json({ users: [...partners, ...rest] });
+    } catch (error) {
+      console.error("Get conversations error:", error);
+      res.status(500).json({ message: "Konuşmalar alınamadı" });
+    }
+  });
+
   app.get("/api/messages", requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;

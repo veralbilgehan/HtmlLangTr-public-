@@ -52,6 +52,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const activeUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -59,15 +60,13 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
   useEffect(() => {
     if (activeUser) {
-      fetchMessages(activeUser.id);
-      const interval = setInterval(() => fetchMessages(activeUser.id), 3000);
+      const isNewConversation = activeUser.id !== activeUserIdRef.current;
+      activeUserIdRef.current = activeUser.id;
+      fetchMessages(activeUser.id, isNewConversation);
+      const interval = setInterval(() => fetchMessages(activeUser.id, false), 3000);
       return () => clearInterval(interval);
     }
   }, [activeUser]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
 
   useEffect(() => {
     return () => {
@@ -79,7 +78,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("/api/users", { credentials: "include" });
+      const response = await fetch("/api/conversations", { credentials: "include" });
       if (response.ok) {
         const data = await response.json();
         const otherUsers = data.users.filter((u: ChatUser) => u.id !== user.id);
@@ -93,12 +92,17 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
     }
   };
 
-  const fetchMessages = async (userId: string) => {
+  const fetchMessages = async (userId: string, scrollToBottom = false) => {
     try {
       const response = await fetch(`/api/messages/${userId}`, { credentials: "include" });
       if (response.ok) {
         const data = await response.json();
         setMessages(data.messages);
+        if (scrollToBottom) {
+          setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+          }, 50);
+        }
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -271,7 +275,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
       if (response.ok) {
         setMessageInput("");
         clearSelectedFile();
-        await fetchMessages(activeUser.id);
+        await fetchMessages(activeUser.id, true);
       } else {
         throw new Error("Mesaj gönderilemedi");
       }
