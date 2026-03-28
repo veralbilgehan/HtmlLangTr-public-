@@ -97,6 +97,22 @@ export const insertSalesRecordSchema = createInsertSchema(salesRecords).omit({ i
 export type InsertSalesRecord = z.infer<typeof insertSalesRecordSchema>;
 export type SalesRecord = typeof salesRecords.$inferSelect;
 
+export const companySettings = pgTable("company_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().unique().references(() => companies.id),
+  shiftStartTime: text("shift_start_time").notNull().default("09:00"),
+  shiftEndTime: text("shift_end_time").notNull().default("18:00"),
+  lateThresholdMinutes: integer("late_threshold_minutes").notNull().default(15),
+  lateWarning1: text("late_warning1").notNull().default("Mesai saatinde işyerinde olmadığınızdan kanuna ilişkin mazeretinizi bildiriniz."),
+  lateWarning2: text("late_warning2").notNull().default("Mesai başlangıç saatini geçmenize rağmen mesainizi başlatmadınız. Lütfen durumu yöneticinize bildirin."),
+  lateWarning3: text("late_warning3").notNull().default("Devamsızlık tutanağı düzenlenecektir. En kısa sürede işyerinizde bulununuz."),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCompanySettingsSchema = createInsertSchema(companySettings).omit({ id: true, updatedAt: true });
+export type InsertCompanySettings = z.infer<typeof insertCompanySettingsSchema>;
+export type CompanySettings = typeof companySettings.$inferSelect;
+
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   senderId: varchar("sender_id").notNull().references(() => users.id),

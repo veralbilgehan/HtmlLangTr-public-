@@ -5,7 +5,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { type User, insertUserSchema, insertShiftSchema, insertActivitySchema, insertMessageSchema, insertCompanySchema, insertActivityTypeSchema, insertSalesRecordSchema } from "@shared/schema";
+import { type User, insertUserSchema, insertShiftSchema, insertActivitySchema, insertMessageSchema, insertCompanySchema, insertActivityTypeSchema, insertSalesRecordSchema, insertCompanySettingsSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -738,6 +738,124 @@ export async function registerRoutes(
       res.status(500).json({ message: "Aktivite verileri alınamadı" });
     }
   });
+
+  // Company Settings routes
+  app.get("/api/company/settings", requireAuth, requireManager, async (req: any, res) => {
+    try {
+      const manager = req.user as User;
+      const companyId = manager.companyId;
+      if (!companyId) return res.json({ settings: null });
+      const settings = await storage.getCompanySettings(companyId);
+      res.json({ settings: settings || null });
+    } catch (error) {
+      console.error("Get company settings error:", error);
+      res.status(500).json({ message: "Ayarlar alınamadı" });
+    }
+  });
+
+  app.put("/api/company/settings", requireAuth, requireManager, async (req: any, res) => {
+    try {
+      const manager = req.user as User;
+      const companyId = manager.role === 'super_admin' ? req.body.companyId : manager.companyId;
+      if (!companyId) return res.status(400).json({ message: "Şirket bulunamadı" });
+
+      const parsed = insertCompanySettingsSchema.safeParse({
+        companyId,
+        shiftStartTime: req.body.shiftStartTime,
+        shiftEndTime: req.body.shiftEndTime,
+        lateThresholdMinutes: parseInt(req.body.lateThresholdMinutes) || 15,
+        lateWarning1: req.body.lateWarning1,
+        lateWarning2: req.body.lateWarning2,
+        lateWarning3: req.body.lateWarning3,
+      });
+
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Geçersiz ayar bilgisi" });
+      }
+
+      const settings = await storage.upsertCompanySettings(parsed.data);
+      res.json({ settings });
+    } catch (error) {
+      console.error("Save company settings error:", error);
+      res.status(500).json({ message: "Ayarlar kaydedilemedi" });
+    }
+  });
+
+  // Late warning background job — runs every minute
+  const sentWarnings = new Set<string>(); // track sent warnings: `userId-date-warningLevel`
+
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+      const allCompanies = await storage.getAllCompanies();
+
+      for (const company of allCompanies) {
+        if (!company.id) continue;
+        const settings = await storage.getCompanySettings(company.id);
+        if (!settings) continue;
+
+        const [startH, startM] = settings.shiftStartTime.split(":").map(Number);
+        const shiftStartMinutes = startH * 60 + startM;
+        const threshold = settings.lateThresholdMinutes;
+
+        // Only run within the first 3 warning windows after shift start
+        const warning1Trigger = shiftStartMinutes + threshold;
+        const warning2Trigger = shiftStartMinutes + threshold * 2;
+        const warning3Trigger = shiftStartMinutes + threshold * 3;
+
+        if (nowMinutes < shiftStartMinutes) continue; // before shift start, skip
+
+        const employees = await storage.getUsersByCompany(company.id);
+        const managers = employees.filter(u => u.role === 'manager' || u.role === 'super_admin');
+        if (managers.length === 0) continue;
+        const sender = managers[0];
+
+        for (const emp of employees) {
+          if (emp.role !== 'employee') continue;
+
+          // Check if employee has an active or today's shift
+          const activeShift = await storage.getActiveShift(emp.id);
+          const hasStartedToday = activeShift && (() => {
+            const shiftDate = new Date(activeShift.startTime);
+            return shiftDate.getFullYear() === now.getFullYear() &&
+              shiftDate.getMonth() === now.getMonth() &&
+              shiftDate.getDate() === now.getDate();
+          })();
+
+          if (hasStartedToday) continue; // already started, no warning needed
+
+          const warnings = [
+            { level: 1, trigger: warning1Trigger, text: settings.lateWarning1 },
+            { level: 2, trigger: warning2Trigger, text: settings.lateWarning2 },
+            { level: 3, trigger: warning3Trigger, text: settings.lateWarning3 },
+          ];
+
+          for (const w of warnings) {
+            const key = `${emp.id}-${todayKey}-w${w.level}`;
+            if (nowMinutes >= w.trigger && !sentWarnings.has(key)) {
+              sentWarnings.add(key);
+              await storage.createMessage({
+                senderId: sender.id,
+                recipientId: emp.id,
+                companyId: company.id,
+                content: w.text,
+                fileUrl: null,
+                fileName: null,
+                fileSize: null,
+                fileType: null,
+              });
+              console.log(`[LateWarning] W${w.level} sent to ${emp.username} at ${company.name}`);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[LateWarning] Error:", err);
+    }
+  }, 60 * 1000); // every 60 seconds
 
   // PDF Documentation download
   app.get("/api/docs/kullanim-kilavuzu", (req, res) => {

@@ -1,12 +1,13 @@
 import { 
-  users, shifts, activities, messages, companies, activityTypes, salesRecords,
+  users, shifts, activities, messages, companies, activityTypes, salesRecords, companySettings,
   type User, type InsertUser,
   type Shift, type InsertShift,
   type Activity, type InsertActivity,
   type Message, type InsertMessage,
   type Company, type InsertCompany,
   type ActivityType, type InsertActivityType,
-  type SalesRecord, type InsertSalesRecord
+  type SalesRecord, type InsertSalesRecord,
+  type CompanySettings, type InsertCompanySettings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, isNull, inArray } from "drizzle-orm";
@@ -57,6 +58,10 @@ export interface IStorage {
   markMessageAsRead(id: string): Promise<void>;
   getUserMessages(userId: string): Promise<Message[]>;
   getConversation(user1Id: string, user2Id: string): Promise<Message[]>;
+
+  // Company Settings
+  getCompanySettings(companyId: string): Promise<CompanySettings | undefined>;
+  upsertCompanySettings(settings: InsertCompanySettings): Promise<CompanySettings>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -304,6 +309,27 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(messages.createdAt);
+  }
+
+  // Company Settings
+  async getCompanySettings(companyId: string): Promise<CompanySettings | undefined> {
+    const [settings] = await db.select().from(companySettings).where(eq(companySettings.companyId, companyId));
+    return settings || undefined;
+  }
+
+  async upsertCompanySettings(settings: InsertCompanySettings): Promise<CompanySettings> {
+    const existing = await this.getCompanySettings(settings.companyId);
+    if (existing) {
+      const [updated] = await db
+        .update(companySettings)
+        .set({ ...settings, updatedAt: new Date() })
+        .where(eq(companySettings.companyId, settings.companyId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(companySettings).values(settings).returning();
+      return created;
+    }
   }
 }
 
