@@ -426,6 +426,55 @@ export async function registerRoutes(
         endLongitude: null,
       });
 
+      // Check if employee is starting late and send automatic warning
+      try {
+        const user = await storage.getUser(userId);
+        if (user && user.companyId && user.role === 'employee') {
+          const settings = await storage.getCompanySettings(user.companyId);
+          if (settings) {
+            const now = new Date();
+            const nowMinutes = now.getHours() * 60 + now.getMinutes();
+            const [startH, startM] = settings.shiftStartTime.split(":").map(Number);
+            const shiftStartMinutes = startH * 60 + startM;
+            const threshold = settings.lateThresholdMinutes;
+            const minsLate = nowMinutes - shiftStartMinutes;
+
+            if (minsLate >= threshold) {
+              // Determine which warning level based on how late
+              let warningText: string | null = null;
+              if (minsLate >= threshold * 3 && settings.lateWarning3) {
+                warningText = settings.lateWarning3;
+              } else if (minsLate >= threshold * 2 && settings.lateWarning2) {
+                warningText = settings.lateWarning2;
+              } else if (settings.lateWarning1) {
+                warningText = settings.lateWarning1;
+              }
+
+              if (warningText) {
+                // Find a manager in the company to send as sender
+                const companyUsers = await storage.getUsersByCompany(user.companyId);
+                const manager = companyUsers.find(u => u.role === 'manager');
+                if (manager) {
+                  await storage.createMessage({
+                    senderId: manager.id,
+                    recipientId: userId,
+                    companyId: user.companyId,
+                    content: warningText,
+                    fileUrl: null,
+                    fileName: null,
+                    fileSize: null,
+                    fileType: null,
+                  });
+                  console.log(`[GeçKalmaUyarısı] ${user.username} mesaiyi ${minsLate} dakika geç başlattı → uyarı gönderildi`);
+                }
+              }
+            }
+          }
+        }
+      } catch (warnErr) {
+        console.error("[GeçKalmaUyarısı] Uyarı gönderilemedi:", warnErr);
+      }
+
       res.json({ shift });
     } catch (error) {
       console.error("Shift start error:", error);
