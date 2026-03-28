@@ -50,7 +50,7 @@ export default function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4">
+    <div className="flex items-center justify-center min-h-screen p-4 bg-white">
       <Card className="w-full max-w-[450px] shadow-2xl border-none animate-in fade-in zoom-in duration-500">
         <CardHeader className="text-center pb-2">
           <CardTitle className="text-xl sm:text-2xl font-bold text-black mb-2">Şirket İçi Portal</CardTitle>
