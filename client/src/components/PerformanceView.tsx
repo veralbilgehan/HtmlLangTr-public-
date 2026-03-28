@@ -80,7 +80,7 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
           (err) => {
             setLocationError("Konum alınamıyor: " + err.message);
           },
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+          { enableHighAccuracy: false, timeout: 30000, maximumAge: 60000 }
         );
       }
     } else {
@@ -124,20 +124,30 @@ export default function PerformanceView({ user }: PerformanceViewProps) {
         reject(new Error("Konum servisi desteklenmiyor"));
         return;
       }
+      // First try fast/low-accuracy, fallback to cached if needed
       navigator.geolocation.getCurrentPosition(
         (position) => {
           resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude });
         },
-        (error) => {
-          let message = "Konum alınamadı";
-          switch (error.code) {
-            case error.PERMISSION_DENIED: message = "Konum izni reddedildi"; break;
-            case error.POSITION_UNAVAILABLE: message = "Konum bilgisi mevcut değil"; break;
-            case error.TIMEOUT: message = "Konum isteği zaman aşımına uğradı"; break;
-          }
-          reject(new Error(message));
+        () => {
+          // First attempt failed, try with cached position allowed
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+            },
+            (error) => {
+              let message = "Konum alınamadı";
+              switch (error.code) {
+                case error.PERMISSION_DENIED: message = "Konum izni reddedildi. Tarayıcı ayarlarından konum iznini açın."; break;
+                case error.POSITION_UNAVAILABLE: message = "Konum bilgisi mevcut değil"; break;
+                case error.TIMEOUT: message = "Konum alınamadı, lütfen tekrar deneyin"; break;
+              }
+              reject(new Error(message));
+            },
+            { enableHighAccuracy: false, timeout: 30000, maximumAge: 120000 }
+          );
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 30000 }
       );
     });
   };
