@@ -125,7 +125,7 @@ export default function Dashboard() {
                 data-testid="menu-performance"
                 className={activeTab === "performance" ? "bg-blue-50 text-primary" : ""}
               >
-                <Activity className="h-4 w-4 mr-2" /> Performans
+                <Activity className="h-4 w-4 mr-2" /> Mesaim
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => setActiveTab("chat")}
@@ -182,7 +182,7 @@ export default function Dashboard() {
           
           {/* Current page indicator */}
           <div className="flex items-center px-4 py-4 text-sm text-muted-foreground border-l">
-            {activeTab === "performance" && <><Activity className="h-4 w-4 mr-2 text-primary" /> Performans</>}
+            {activeTab === "performance" && <><Activity className="h-4 w-4 mr-2 text-primary" /> Mesaim</>}
             {activeTab === "chat" && <><MessageSquare className="h-4 w-4 mr-2 text-primary" /> Sohbet</>}
             {activeTab === "dashboard" && <><LayoutDashboard className="h-4 w-4 mr-2 text-primary" /> Panel</>}
             {activeTab === "reports" && <><FileText className="h-4 w-4 mr-2 text-primary" /> Raporlar</>}
