@@ -8,17 +8,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, LayoutDashboard, Activity, MessageSquare, Settings, Users, Building2, Menu, FileText } from "lucide-react";
-import DashboardHome from "@/components/DashboardHome";
+import { LogOut, Activity, MessageSquare, Settings, Users, Building2, Menu } from "lucide-react";
 import PerformanceView from "@/components/PerformanceView";
 import ChatInterface from "@/components/ChatInterface";
 import UserManagement from "@/components/UserManagement";
 import CompanyManagement from "@/components/CompanyManagement";
 import ActivitySettings from "@/components/ActivitySettings";
-import ManagerReport from "@/components/ManagerReport";
 import { getCurrentUser, getCurrentCompany, logout, type User, type Company } from "@/lib/auth";
 
-type TabType = "dashboard" | "performance" | "chat" | "users" | "settings" | "companies" | "reports";
+type TabType = "performance" | "chat" | "users" | "settings" | "companies";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -139,20 +137,6 @@ export default function Dashboard() {
               {isManager && (
                 <>
                   <DropdownMenuItem 
-                    onClick={() => setActiveTab("dashboard")}
-                    data-testid="menu-dashboard"
-                    className={activeTab === "dashboard" ? "bg-blue-50 text-primary" : ""}
-                  >
-                    <LayoutDashboard className="h-4 w-4 mr-2" /> Panel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => setActiveTab("reports")}
-                    data-testid="menu-reports"
-                    className={activeTab === "reports" ? "bg-blue-50 text-primary" : ""}
-                  >
-                    <FileText className="h-4 w-4 mr-2" /> Raporlar
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
                     onClick={() => setActiveTab("users")}
                     data-testid="menu-users"
                     className={activeTab === "users" ? "bg-blue-50 text-primary" : ""}
@@ -184,8 +168,6 @@ export default function Dashboard() {
           <div className="flex items-center px-4 py-4 text-sm text-muted-foreground border-l">
             {activeTab === "performance" && <><Activity className="h-4 w-4 mr-2 text-primary" /> Mesaim</>}
             {activeTab === "chat" && <><MessageSquare className="h-4 w-4 mr-2 text-primary" /> Sohbet</>}
-            {activeTab === "dashboard" && <><LayoutDashboard className="h-4 w-4 mr-2 text-primary" /> Panel</>}
-            {activeTab === "reports" && <><FileText className="h-4 w-4 mr-2 text-primary" /> Raporlar</>}
             {activeTab === "users" && <><Users className="h-4 w-4 mr-2 text-primary" /> Kullanıcılar</>}
             {activeTab === "companies" && <><Building2 className="h-4 w-4 mr-2 text-primary" /> Şirketler</>}
             {activeTab === "settings" && <><Settings className="h-4 w-4 mr-2 text-primary" /> Ayarlar</>}
@@ -194,10 +176,8 @@ export default function Dashboard() {
 
         {/* Content */}
         <main className="flex-1 p-6 bg-slate-50/30 overflow-y-auto">
-          {activeTab === "dashboard" && <DashboardHome user={user} />}
           {activeTab === "performance" && <PerformanceView user={user} />}
           {activeTab === "chat" && <ChatInterface user={user} />}
-          {activeTab === "reports" && isManager && <ManagerReport user={user} />}
           {activeTab === "users" && isManager && <UserManagement user={user} />}
           {activeTab === "companies" && isSuperAdmin && <CompanyManagement user={user} />}
           {activeTab === "settings" && isManager && <ActivitySettings user={user} />}
