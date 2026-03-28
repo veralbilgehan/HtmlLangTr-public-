@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Settings, Clock, Bell, Save, Loader2 } from "lucide-react";
+import { Settings, Clock, Bell, Save, Loader2, Send, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { type User } from "@/lib/auth";
 
@@ -83,6 +83,27 @@ export default function ActivitySettings({ user }: ActivitySettingsProps) {
     },
   });
 
+  const testWarningMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/company/test-warning", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "Test uyarısı gönderilemedi");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Test Gönderildi", description: data.message });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Hata", description: err.message, variant: "destructive" });
+    },
+  });
+
   const handleSave = () => {
     if (!form.shiftStartTime || !form.shiftEndTime) {
       toast({ title: "Hata", description: "Mesai saatlerini doldurun", variant: "destructive" });
@@ -94,6 +115,26 @@ export default function ActivitySettings({ user }: ActivitySettingsProps) {
     }
     saveMutation.mutate(form);
   };
+
+  // Calculate next automatic warning time
+  const getNextWarningInfo = () => {
+    if (!form.shiftStartTime || !form.lateThresholdMinutes) return null;
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const [h, m] = form.shiftStartTime.split(":").map(Number);
+    const startMinutes = h * 60 + m;
+    const threshold = Number(form.lateThresholdMinutes);
+    const w1 = startMinutes + threshold;
+    const w2 = startMinutes + threshold * 2;
+    const w3 = startMinutes + threshold * 3;
+    const toTime = (mins: number) => `${String(Math.floor(mins / 60)).padStart(2,'0')}:${String(mins % 60).padStart(2,'0')}`;
+    if (nowMinutes < w1) return { status: "bekliyor", next: toTime(w1), color: "text-blue-600" };
+    if (nowMinutes < w2) return { status: "1. uyarı gönderildi", next: toTime(w2), color: "text-yellow-600" };
+    if (nowMinutes < w3) return { status: "2. uyarı gönderildi", next: toTime(w3), color: "text-orange-600" };
+    return { status: "3. uyarı gönderildi", next: null, color: "text-red-600" };
+  };
+
+  const warningInfo = getNextWarningInfo();
 
   if (isLoading) {
     return (
@@ -234,18 +275,59 @@ export default function ActivitySettings({ user }: ActivitySettingsProps) {
         </CardContent>
       </Card>
 
-      <Button
-        onClick={handleSave}
-        disabled={saveMutation.isPending}
-        className="w-full sm:w-auto gap-2"
-        data-testid="button-save-settings"
-      >
-        {saveMutation.isPending ? (
-          <><Loader2 className="h-4 w-4 animate-spin" />Kaydediliyor...</>
-        ) : (
-          <><Save className="h-4 w-4" />Ayarları Kaydet</>
-        )}
-      </Button>
+      {/* Status info card */}
+      {warningInfo && (
+        <Card className="border-blue-100 bg-blue-50">
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+              <div className="text-sm space-y-1">
+                <p className="font-medium text-blue-800">Otomatik Uyarı Durumu</p>
+                <p className="text-blue-700">
+                  Şu an: <span className="font-mono font-bold">{new Date().getHours().toString().padStart(2,'0')}:{new Date().getMinutes().toString().padStart(2,'0')}</span>
+                  {" · "}
+                  Mesai başlangıç: <span className="font-mono font-bold">{form.shiftStartTime}</span>
+                  {" · "}
+                  Eşik: <span className="font-bold">{form.lateThresholdMinutes} dk</span>
+                </p>
+                <p className={`font-medium ${warningInfo.color}`}>
+                  Durum: {warningInfo.status}
+                  {warningInfo.next && <> · Sonraki uyarı saat <span className="font-mono">{warningInfo.next}</span>'de</>}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button
+          onClick={handleSave}
+          disabled={saveMutation.isPending}
+          className="w-full sm:w-auto gap-2"
+          data-testid="button-save-settings"
+        >
+          {saveMutation.isPending ? (
+            <><Loader2 className="h-4 w-4 animate-spin" />Kaydediliyor...</>
+          ) : (
+            <><Save className="h-4 w-4" />Ayarları Kaydet</>
+          )}
+        </Button>
+
+        <Button
+          onClick={() => testWarningMutation.mutate()}
+          disabled={testWarningMutation.isPending}
+          variant="outline"
+          className="w-full sm:w-auto gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"
+          data-testid="button-test-warning"
+        >
+          {testWarningMutation.isPending ? (
+            <><Loader2 className="h-4 w-4 animate-spin" />Gönderiliyor...</>
+          ) : (
+            <><Send className="h-4 w-4" />Test Uyarısı Gönder</>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

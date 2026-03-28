@@ -830,6 +830,49 @@ export async function registerRoutes(
     }
   });
 
+  // Manual test warning endpoint — sends W1 immediately to all employees without a shift today
+  app.post("/api/company/test-warning", requireAuth, requireManager, async (req: any, res) => {
+    try {
+      const manager = req.user as User;
+      const companyId = manager.companyId;
+      if (!companyId) return res.status(400).json({ message: "Şirket bulunamadı" });
+
+      const settings = await storage.getCompanySettings(companyId);
+      if (!settings || !settings.lateWarning1) {
+        return res.status(400).json({ message: "Önce uyarı ayarlarını kaydedin" });
+      }
+
+      const employees = await storage.getUsersByCompany(companyId);
+      const managerUser = employees.find(u => u.role === 'manager');
+      if (!managerUser) return res.status(400).json({ message: "Yönetici bulunamadı" });
+
+      let sent = 0;
+      for (const emp of employees) {
+        if (emp.role !== 'employee') continue;
+        const todayShift = await storage.getUserTodayShift(emp.id);
+        if (todayShift) continue; // already started today
+
+        await storage.createMessage({
+          senderId: managerUser.id,
+          recipientId: emp.id,
+          companyId,
+          content: `[TEST] ${settings.lateWarning1}`,
+          fileUrl: null,
+          fileName: null,
+          fileSize: null,
+          fileType: null,
+        });
+        sent++;
+        console.log(`[TestUyarı] ${emp.username} kullanıcısına test uyarısı gönderildi`);
+      }
+
+      res.json({ message: `${sent} çalışana test uyarısı gönderildi`, sent });
+    } catch (error) {
+      console.error("Test warning error:", error);
+      res.status(500).json({ message: "Test uyarısı gönderilemedi" });
+    }
+  });
+
   // Late warning background job — runs every minute
   const sentWarnings = new Set<string>(); // track sent warnings: `userId-date-warningLevel`
 
