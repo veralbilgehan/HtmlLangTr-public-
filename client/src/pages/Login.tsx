@@ -52,9 +52,9 @@ export default function Login() {
   return (
     <div className="flex items-center justify-center min-h-screen p-4">
       <Card className="w-full max-w-[450px] shadow-2xl border-none animate-in fade-in zoom-in duration-500">
-        <CardHeader className="text-center pb-2">
-          <CardTitle className="text-xl sm:text-2xl font-bold text-primary mb-2">Şirket İçi Portal</CardTitle>
-          <CardDescription className="text-xs sm:text-sm">Performans ve İletişim Sistemi</CardDescription>
+        <CardHeader className="text-center pb-4 bg-primary rounded-t-xl">
+          <CardTitle className="text-xl sm:text-2xl font-bold text-white mb-1">Şirket İçi Portal</CardTitle>
+          <CardDescription className="text-xs sm:text-sm text-blue-100">Performans ve İletişim Sistemi</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="employee" className="w-full">
