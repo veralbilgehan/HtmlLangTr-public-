@@ -246,6 +246,11 @@ export default function UserManagement({ user }: UserManagementProps) {
                 </div>
               )}
             </div>
+            {createUserMutation.error && (
+              <div className="px-1 pb-2 text-sm text-red-600 font-medium">
+                {(createUserMutation.error as Error).message}
+              </div>
+            )}
             <DialogFooter>
               <Button
                 onClick={handleCreateUser}

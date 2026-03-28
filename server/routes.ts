@@ -325,6 +325,9 @@ export async function registerRoutes(
     try {
       const manager = req.user as User;
       
+      const rawCompanyId = manager.role === 'super_admin' ? req.body.companyId : manager.companyId;
+      const companyId = rawCompanyId && rawCompanyId !== '' ? rawCompanyId : null;
+
       const parsed = insertUserSchema.safeParse({
         username: req.body.username,
         password: req.body.password,
@@ -332,11 +335,12 @@ export async function registerRoutes(
         role: req.body.role || 'employee',
         department: req.body.department || null,
         avatar: req.body.avatar || null,
-        companyId: manager.role === 'super_admin' ? req.body.companyId : manager.companyId,
+        companyId,
       });
       
       if (!parsed.success) {
-        return res.status(400).json({ message: "Geçersiz kullanıcı bilgisi" });
+        console.error("User parse error:", parsed.error);
+        return res.status(400).json({ message: "Geçersiz kullanıcı bilgisi: " + parsed.error.issues.map(i => i.message).join(", ") });
       }
       
       const newUser = await storage.createUser(parsed.data);
@@ -350,8 +354,11 @@ export async function registerRoutes(
           department: newUser.department,
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Create user error:", error);
+      if (error?.code === '23505' || error?.message?.includes('unique')) {
+        return res.status(400).json({ message: "Bu kullanıcı adı zaten kullanılıyor" });
+      }
       res.status(500).json({ message: "Kullanıcı oluşturulamadı" });
     }
   });
