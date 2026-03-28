@@ -10,7 +10,7 @@ import {
   type CompanySettings, type InsertCompanySettings
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, desc, isNull, inArray } from "drizzle-orm";
+import { eq, and, or, desc, isNull, inArray, gte } from "drizzle-orm";
 
 export interface IStorage {
   // Companies
@@ -38,6 +38,7 @@ export interface IStorage {
   createShift(shift: InsertShift): Promise<Shift>;
   updateShift(id: string, updates: Partial<Shift>): Promise<Shift | undefined>;
   getActiveShift(userId: string): Promise<Shift | undefined>;
+  getUserTodayShift(userId: string): Promise<Shift | undefined>;
   getUserShifts(userId: string): Promise<Shift[]>;
   getAllShifts(companyId: string | null): Promise<Shift[]>;
   
@@ -178,6 +179,18 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(shifts)
       .where(and(eq(shifts.userId, userId), isNull(shifts.endTime)))
+      .orderBy(desc(shifts.startTime))
+      .limit(1);
+    return shift || undefined;
+  }
+
+  async getUserTodayShift(userId: string): Promise<Shift | undefined> {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const [shift] = await db
+      .select()
+      .from(shifts)
+      .where(and(eq(shifts.userId, userId), gte(shifts.startTime, startOfDay)))
       .orderBy(desc(shifts.startTime))
       .limit(1);
     return shift || undefined;

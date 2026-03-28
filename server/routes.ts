@@ -784,48 +784,56 @@ export async function registerRoutes(
   // Late warning background job — runs every minute
   const sentWarnings = new Set<string>(); // track sent warnings: `userId-date-warningLevel`
 
-  setInterval(async () => {
+  const runLateWarningCheck = async () => {
     try {
       const now = new Date();
       const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+      console.log(`[LateWarning] Kontrol çalışıyor - Saat: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} (${nowMinutes} dk)`);
 
       const allCompanies = await storage.getAllCompanies();
 
       for (const company of allCompanies) {
         if (!company.id) continue;
         const settings = await storage.getCompanySettings(company.id);
-        if (!settings) continue;
+        if (!settings) {
+          console.log(`[LateWarning] ${company.name} için ayar bulunamadı, atlanıyor.`);
+          continue;
+        }
 
         const [startH, startM] = settings.shiftStartTime.split(":").map(Number);
         const shiftStartMinutes = startH * 60 + startM;
         const threshold = settings.lateThresholdMinutes;
 
-        // Only run within the first 3 warning windows after shift start
         const warning1Trigger = shiftStartMinutes + threshold;
         const warning2Trigger = shiftStartMinutes + threshold * 2;
         const warning3Trigger = shiftStartMinutes + threshold * 3;
 
-        if (nowMinutes < shiftStartMinutes) continue; // before shift start, skip
+        console.log(`[LateWarning] ${company.name}: Mesai başlangıç=${settings.shiftStartTime} (${shiftStartMinutes}dk), Eşik=${threshold}dk, Şu an=${nowMinutes}dk`);
+
+        if (nowMinutes < warning1Trigger) {
+          console.log(`[LateWarning] ${company.name}: Henüz uyarı zamanı değil (ilk uyarı ${warning1Trigger}dk'da), atlanıyor.`);
+          continue;
+        }
 
         const employees = await storage.getUsersByCompany(company.id);
-        const managers = employees.filter(u => u.role === 'manager' || u.role === 'super_admin');
-        if (managers.length === 0) continue;
+        const managers = employees.filter(u => u.role === 'manager');
+        if (managers.length === 0) {
+          console.log(`[LateWarning] ${company.name}: Yönetici bulunamadı, uyarı gönderilemedi.`);
+          continue;
+        }
         const sender = managers[0];
 
         for (const emp of employees) {
           if (emp.role !== 'employee') continue;
 
-          // Check if employee has an active or today's shift
-          const activeShift = await storage.getActiveShift(emp.id);
-          const hasStartedToday = activeShift && (() => {
-            const shiftDate = new Date(activeShift.startTime);
-            return shiftDate.getFullYear() === now.getFullYear() &&
-              shiftDate.getMonth() === now.getMonth() &&
-              shiftDate.getDate() === now.getDate();
-          })();
-
-          if (hasStartedToday) continue; // already started, no warning needed
+          // Use getUserTodayShift - catches both active AND completed shifts today
+          const todayShift = await storage.getUserTodayShift(emp.id);
+          if (todayShift) {
+            console.log(`[LateWarning] ${emp.username} bugün mesai başlatmış, uyarı gönderilmiyor.`);
+            continue;
+          }
 
           const warnings = [
             { level: 1, trigger: warning1Trigger, text: settings.lateWarning1 },
@@ -834,6 +842,7 @@ export async function registerRoutes(
           ];
 
           for (const w of warnings) {
+            if (!w.text) continue;
             const key = `${emp.id}-${todayKey}-w${w.level}`;
             if (nowMinutes >= w.trigger && !sentWarnings.has(key)) {
               sentWarnings.add(key);
@@ -847,15 +856,19 @@ export async function registerRoutes(
                 fileSize: null,
                 fileType: null,
               });
-              console.log(`[LateWarning] W${w.level} sent to ${emp.username} at ${company.name}`);
+              console.log(`[LateWarning] ✓ Uyarı ${w.level} gönderildi -> ${emp.username} (${company.name}) - Gönderen: ${sender.username}`);
             }
           }
         }
       }
     } catch (err) {
-      console.error("[LateWarning] Error:", err);
+      console.error("[LateWarning] Hata:", err);
     }
-  }, 60 * 1000); // every 60 seconds
+  };
+
+  // Run immediately on startup, then every 60 seconds
+  runLateWarningCheck();
+  setInterval(runLateWarningCheck, 60 * 1000);
 
   // PDF Documentation download
   app.get("/api/docs/kullanim-kilavuzu", (req, res) => {
