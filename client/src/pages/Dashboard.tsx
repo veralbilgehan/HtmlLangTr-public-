@@ -1,11 +1,11 @@
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogOut, Activity, MessageSquare, Settings, Users, Building2, Menu } from "lucide-react";
@@ -97,16 +97,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Sağ: Çıkış butonu */}
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleLogout}
-            className="shadow-lg hover:bg-red-600 text-xs px-2 md:px-3 shrink-0"
-            data-testid="button-logout"
-          >
-            <LogOut className="h-3 w-3 md:h-4 md:w-4 mr-1" /> Çıkış
-          </Button>
         </header>
 
         {/* Navigation - Hamburger Menu */}
@@ -165,6 +155,14 @@ export default function Dashboard() {
                   </DropdownMenuItem>
                 </>
               )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleLogout}
+                data-testid="button-logout"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 focus:text-red-700 focus:bg-red-50"
+              >
+                <LogOut className="h-4 w-4 mr-2" /> Çıkış Yap
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
