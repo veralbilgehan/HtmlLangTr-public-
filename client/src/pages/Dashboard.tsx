@@ -69,40 +69,44 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden min-h-[85vh] flex flex-col">
         {/* Header */}
-        <header className="bg-primary text-primary-foreground p-3 md:p-6 flex flex-col sm:flex-row justify-between items-center gap-2 md:gap-4">
-          <div className="text-center sm:text-left">
-            <h1 className="text-lg md:text-2xl font-bold" data-testid="text-company-name">
-              {company?.name || (isSuperAdmin ? "Sistem Yönetimi" : "Şirket Portalı")}
-            </h1>
-            <p className="text-primary-foreground/80 text-xs md:text-sm" data-testid="text-welcome">
-              {user.fullName} - {getRoleLabel(user.role)}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 md:gap-4">
-            <div className="hidden sm:flex items-center gap-2 md:gap-3 bg-white/10 px-3 md:px-4 py-2 rounded-full backdrop-blur-sm">
-              <Avatar className="h-6 w-6 md:h-8 md:w-8 border-2 border-white/20">
-                {user.avatar ? (
-                  <AvatarImage src={user.avatar} alt={user.fullName} />
-                ) : null}
-                <AvatarFallback className="bg-white text-primary font-bold text-xs md:text-sm">
+        <header className="bg-primary text-primary-foreground px-3 md:px-6 py-3 md:py-4 flex items-center justify-between gap-3">
+          {/* Sol: Şirket adı + Kullanıcı yan yana */}
+          <div className="flex items-center gap-3 md:gap-5 min-w-0">
+            {/* Şirket adı */}
+            <div className="min-w-0">
+              <h1 className="text-sm md:text-xl font-bold leading-tight truncate" data-testid="text-company-name">
+                {company?.name || (isSuperAdmin ? "Sistem Yönetimi" : "Şirket Portalı")}
+              </h1>
+            </div>
+            {/* Ayırıcı */}
+            <div className="w-px h-8 bg-white/30 shrink-0 hidden sm:block" />
+            {/* Kullanıcı bilgisi */}
+            <div className="flex items-center gap-2 min-w-0">
+              <Avatar className="h-7 w-7 md:h-9 md:w-9 border-2 border-white/30 shrink-0">
+                {user.avatar ? <AvatarImage src={user.avatar} alt={user.fullName} /> : null}
+                <AvatarFallback className="bg-white text-primary font-bold text-xs">
                   {getInitials(user.fullName)}
                 </AvatarFallback>
               </Avatar>
-              <div className="text-xs md:text-sm">
-                <p className="font-medium leading-none" data-testid="text-fullname">{user.fullName}</p>
-                <p className="text-[10px] md:text-xs opacity-80" data-testid="text-department">{user.department || getRoleLabel(user.role)}</p>
+              <div className="min-w-0">
+                <p className="font-semibold text-xs md:text-sm leading-tight truncate" data-testid="text-fullname">{user.fullName}</p>
+                <p className="text-[10px] md:text-xs opacity-75 truncate" data-testid="text-department">
+                  {user.department ? `${user.department} · ` : ""}{getRoleLabel(user.role)}
+                </p>
               </div>
             </div>
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              onClick={handleLogout}
-              className="shadow-lg hover:bg-red-600 text-xs md:text-sm px-2 md:px-3"
-              data-testid="button-logout"
-            >
-              <LogOut className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" /> Çıkış
-            </Button>
           </div>
+
+          {/* Sağ: Çıkış butonu */}
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleLogout}
+            className="shadow-lg hover:bg-red-600 text-xs px-2 md:px-3 shrink-0"
+            data-testid="button-logout"
+          >
+            <LogOut className="h-3 w-3 md:h-4 md:w-4 mr-1" /> Çıkış
+          </Button>
         </header>
 
         {/* Navigation - Hamburger Menu */}
