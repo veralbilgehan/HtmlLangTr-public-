@@ -254,13 +254,18 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   };
 
   const uploadFile = async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
+    const data = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Dosya okunamadı"));
+      reader.readAsDataURL(file);
+    });
 
-    const response = await fetch("/api/upload", {
+    const response = await fetch("/api/upload-base64", {
       method: "POST",
       credentials: "include",
-      body: formData,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data, name: file.name, type: file.type }),
     });
 
     if (!response.ok) {

@@ -654,6 +654,52 @@ export async function registerRoutes(
     }
   });
 
+  // Base64 file upload endpoint (for environments where multipart upload fails)
+  app.post("/api/upload-base64", requireAuth, async (req: any, res: any) => {
+    try {
+      const { data, name, type } = req.body;
+      if (!data || !name || !type) {
+        return res.status(400).json({ message: "Eksik dosya verisi" });
+      }
+
+      const allowedTypes = [
+        "image/jpeg", "image/png", "image/gif", "image/webp",
+        "image/heic", "image/heif",
+        "application/pdf", "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "text/plain",
+      ];
+      if (!allowedTypes.includes(type)) {
+        return res.status(400).json({ message: "Desteklenmeyen dosya türü" });
+      }
+
+      const base64Data = data.replace(/^data:[^;]+;base64,/, "");
+      const buffer = Buffer.from(base64Data, "base64");
+
+      if (buffer.length > 10 * 1024 * 1024) {
+        return res.status(400).json({ message: "Dosya boyutu 10MB'dan büyük olamaz" });
+      }
+
+      const ext = path.extname(name) || ".bin";
+      const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9) + ext;
+      const filePath = path.join(uploadDir, uniqueName);
+      fs.writeFileSync(filePath, buffer);
+
+      console.log("Base64 file uploaded:", name, type, buffer.length);
+      res.json({
+        fileUrl: `/uploads/${uniqueName}`,
+        fileName: name,
+        fileSize: buffer.length,
+        fileType: type,
+      });
+    } catch (error) {
+      console.error("Base64 upload error:", error);
+      res.status(500).json({ message: "Dosya yüklenemedi" });
+    }
+  });
+
   // Message routes
   app.post("/api/messages", requireAuth, async (req: any, res) => {
     try {
