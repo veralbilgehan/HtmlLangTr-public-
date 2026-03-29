@@ -355,16 +355,17 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
   return (
     <div className="flex flex-col md:flex-row h-[70vh] md:h-[500px] md:max-h-[70vh] border rounded-lg overflow-hidden bg-white shadow-sm relative">
-      {/* Hidden elements */}
+      <canvas ref={canvasRef} className="hidden" />
       <input
+        id="chat-file-input"
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
-        accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+        disabled={isSending}
+        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
         data-testid="input-file"
       />
-      <canvas ref={canvasRef} className="hidden" />
 
       {/* Camera Modal */}
       {showCamera && (
@@ -587,15 +588,6 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              onChange={handleFileChange}
-              accept="image/jpeg,image/png,image/gif,image/webp,image/heic,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain"
-            />
-
             {/* Message input and file controls */}
             <div className="p-2 bg-white border-t shrink-0">
               {/* Selected file/image preview */}
@@ -623,16 +615,13 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
               )}
               
               <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground shrink-0 h-8 w-8"
-                  onClick={handleFileSelect}
-                  disabled={isSending}
+                <label
+                  htmlFor="chat-file-input"
+                  className={`inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground shrink-0 cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors ${isSending ? "opacity-50 pointer-events-none" : ""}`}
                   data-testid="button-attach-file"
                 >
                   <Paperclip className="h-4 w-4" />
-                </Button>
+                </label>
                 <Button
                   variant="ghost"
                   size="icon"
