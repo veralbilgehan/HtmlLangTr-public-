@@ -10,7 +10,7 @@ import {
   type CompanySettings, type InsertCompanySettings
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, desc, isNull, inArray, gte, sql } from "drizzle-orm";
+import { eq, and, or, desc, isNull, inArray, gte } from "drizzle-orm";
 
 export interface IStorage {
   // Companies
@@ -326,19 +326,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRecentConversationPartnerIds(userId: string): Promise<string[]> {
-    const rows = await db.execute<{ partner_id: string; last_message: Date }>(sql`
-      SELECT partner_id, MAX(created_at) AS last_message
-      FROM (
-        SELECT
-          CASE WHEN sender_id = ${userId} THEN recipient_id ELSE sender_id END AS partner_id,
-          created_at
-        FROM messages
-        WHERE sender_id = ${userId} OR recipient_id = ${userId}
-      ) t
-      GROUP BY partner_id
-      ORDER BY last_message DESC
-    `);
-    return rows.rows.map(r => r.partner_id);
+    // Fetch all messages for this user, ordered by newest first
+    const rows = await db
+      .select({
+        senderId: messages.senderId,
+        recipientId: messages.recipientId,
+      })
+      .from(messages)
+      .where(or(eq(messages.senderId, userId), eq(messages.recipientId, userId)))
+      .orderBy(desc(messages.createdAt));
+
+    // Deduplicate in application code (preserves most-recent-first order)
+    const seen = new Set<string>();
+    const partnerIds: string[] = [];
+    for (const row of rows) {
+      const partnerId = row.senderId === userId ? row.recipientId : row.senderId;
+      if (!seen.has(partnerId)) {
+        seen.add(partnerId);
+        partnerIds.push(partnerId);
+      }
+    }
+    return partnerIds;
   }
 
   // Company Settings

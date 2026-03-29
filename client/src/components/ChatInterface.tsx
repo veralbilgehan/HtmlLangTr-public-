@@ -86,6 +86,21 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         if (otherUsers.length > 0 && !activeUser) {
           setActiveUser(otherUsers[0]);
         }
+        return;
+      }
+    } catch {
+      // fall through to fallback
+    }
+    // Fallback: load all users if conversations endpoint fails
+    try {
+      const response = await fetch("/api/users", { credentials: "include" });
+      if (response.ok) {
+        const data = await response.json();
+        const otherUsers = data.users.filter((u: ChatUser) => u.id !== user.id);
+        setUsers(otherUsers);
+        if (otherUsers.length > 0 && !activeUser) {
+          setActiveUser(otherUsers[0]);
+        }
       }
     } catch (error) {
       console.error("Error fetching users:", error);
