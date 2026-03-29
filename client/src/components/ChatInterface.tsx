@@ -264,7 +264,8 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
     });
 
     if (!response.ok) {
-      throw new Error("Dosya yüklenemedi");
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.message || `Dosya yüklenemedi (${response.status})`);
     }
 
     return response.json();
@@ -585,6 +586,15 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
               )}
               <div ref={messagesEndRef} />
             </div>
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={handleFileChange}
+              accept="image/jpeg,image/png,image/gif,image/webp,image/heic,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain"
+            />
 
             {/* Message input and file controls */}
             <div className="p-2 bg-white border-t shrink-0">
