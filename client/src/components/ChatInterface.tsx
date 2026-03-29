@@ -56,6 +56,9 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
   useEffect(() => {
     fetchUsers();
+    // Re-fetch user list every 30s so new users appear and list recovers from failures
+    const interval = setInterval(fetchUsers, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -76,34 +79,42 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
     };
   }, [cameraStream]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (retry = true) => {
+    let loaded = false;
     try {
       const response = await fetch("/api/conversations", { credentials: "include" });
       if (response.ok) {
         const data = await response.json();
         const otherUsers = data.users.filter((u: ChatUser) => u.id !== user.id);
-        setUsers(otherUsers);
-        if (otherUsers.length > 0 && !activeUser) {
-          setActiveUser(otherUsers[0]);
+        if (otherUsers.length > 0) {
+          setUsers(otherUsers);
+          setActiveUser(prev => prev ?? otherUsers[0]);
+          loaded = true;
         }
-        return;
       }
     } catch {
       // fall through to fallback
     }
-    // Fallback: load all users if conversations endpoint fails
-    try {
-      const response = await fetch("/api/users", { credentials: "include" });
-      if (response.ok) {
-        const data = await response.json();
-        const otherUsers = data.users.filter((u: ChatUser) => u.id !== user.id);
-        setUsers(otherUsers);
-        if (otherUsers.length > 0 && !activeUser) {
-          setActiveUser(otherUsers[0]);
+    if (!loaded) {
+      // Fallback: load all users if conversations endpoint fails or returns empty
+      try {
+        const response = await fetch("/api/users", { credentials: "include" });
+        if (response.ok) {
+          const data = await response.json();
+          const otherUsers = data.users.filter((u: ChatUser) => u.id !== user.id);
+          if (otherUsers.length > 0) {
+            setUsers(otherUsers);
+            setActiveUser(prev => prev ?? otherUsers[0]);
+            loaded = true;
+          }
         }
+      } catch (error) {
+        console.error("Error fetching users:", error);
       }
-    } catch (error) {
-      console.error("Error fetching users:", error);
+    }
+    // Retry once after 3s if still no users (e.g. server still starting up)
+    if (!loaded && retry) {
+      setTimeout(() => fetchUsers(false), 3000);
     }
   };
 
@@ -292,7 +303,8 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         clearSelectedFile();
         await fetchMessages(activeUser.id, true);
       } else {
-        throw new Error("Mesaj gönderilemedi");
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || `Mesaj gönderilemedi (${response.status})`);
       }
     } catch (error: any) {
       toast({
