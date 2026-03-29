@@ -97,6 +97,12 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* Sağ üst: Logo */}
+          <img
+            src="/bigchat-logo.jpg"
+            alt="BIGChat Logo"
+            className="h-8 md:h-10 w-auto rounded object-contain bg-white px-1"
+          />
         </header>
 
         {/* Navigation - Hamburger Menu */}
