@@ -1,5 +1,6 @@
 import { 
   users, shifts, activities, messages, companies, activityTypes, salesRecords, companySettings,
+  groups, groupMembers, groupMessages,
   type User, type InsertUser,
   type Shift, type InsertShift,
   type Activity, type InsertActivity,
@@ -7,7 +8,10 @@ import {
   type Company, type InsertCompany,
   type ActivityType, type InsertActivityType,
   type SalesRecord, type InsertSalesRecord,
-  type CompanySettings, type InsertCompanySettings
+  type CompanySettings, type InsertCompanySettings,
+  type Group, type InsertGroup,
+  type GroupMember,
+  type GroupMessage, type InsertGroupMessage,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, isNull, inArray, gte } from "drizzle-orm";
@@ -64,6 +68,19 @@ export interface IStorage {
   // Company Settings
   getCompanySettings(companyId: string): Promise<CompanySettings | undefined>;
   upsertCompanySettings(settings: InsertCompanySettings): Promise<CompanySettings>;
+
+  // Groups
+  createGroup(group: InsertGroup): Promise<Group>;
+  getGroup(id: string): Promise<Group | undefined>;
+  getGroupsByCompany(companyId: string): Promise<Group[]>;
+  getGroupsByUser(userId: string): Promise<Group[]>;
+  addGroupMember(groupId: string, userId: string): Promise<GroupMember>;
+  removeGroupMember(groupId: string, userId: string): Promise<void>;
+  getGroupMembers(groupId: string): Promise<GroupMember[]>;
+  isGroupMember(groupId: string, userId: string): Promise<boolean>;
+  createGroupMessage(msg: InsertGroupMessage): Promise<GroupMessage>;
+  getGroupMessages(groupId: string): Promise<GroupMessage[]>;
+  deleteGroup(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -368,6 +385,63 @@ export class DatabaseStorage implements IStorage {
       const [created] = await db.insert(companySettings).values(settings).returning();
       return created;
     }
+  }
+
+  // Groups
+  async createGroup(insertGroup: InsertGroup): Promise<Group> {
+    const [group] = await db.insert(groups).values(insertGroup).returning();
+    return group;
+  }
+
+  async getGroup(id: string): Promise<Group | undefined> {
+    const [group] = await db.select().from(groups).where(eq(groups.id, id));
+    return group || undefined;
+  }
+
+  async getGroupsByCompany(companyId: string): Promise<Group[]> {
+    return await db.select().from(groups).where(eq(groups.companyId, companyId)).orderBy(groups.name);
+  }
+
+  async getGroupsByUser(userId: string): Promise<Group[]> {
+    const memberRows = await db.select({ groupId: groupMembers.groupId }).from(groupMembers).where(eq(groupMembers.userId, userId));
+    if (memberRows.length === 0) return [];
+    const ids = memberRows.map(r => r.groupId);
+    return await db.select().from(groups).where(inArray(groups.id, ids)).orderBy(groups.name);
+  }
+
+  async addGroupMember(groupId: string, userId: string): Promise<GroupMember> {
+    const existing = await db.select().from(groupMembers).where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
+    if (existing.length > 0) return existing[0];
+    const [member] = await db.insert(groupMembers).values({ groupId, userId }).returning();
+    return member;
+  }
+
+  async removeGroupMember(groupId: string, userId: string): Promise<void> {
+    await db.delete(groupMembers).where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
+  }
+
+  async getGroupMembers(groupId: string): Promise<GroupMember[]> {
+    return await db.select().from(groupMembers).where(eq(groupMembers.groupId, groupId));
+  }
+
+  async isGroupMember(groupId: string, userId: string): Promise<boolean> {
+    const rows = await db.select().from(groupMembers).where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
+    return rows.length > 0;
+  }
+
+  async createGroupMessage(msg: InsertGroupMessage): Promise<GroupMessage> {
+    const [created] = await db.insert(groupMessages).values(msg).returning();
+    return created;
+  }
+
+  async getGroupMessages(groupId: string): Promise<GroupMessage[]> {
+    return await db.select().from(groupMessages).where(eq(groupMessages.groupId, groupId)).orderBy(groupMessages.createdAt);
+  }
+
+  async deleteGroup(id: string): Promise<void> {
+    await db.delete(groupMessages).where(eq(groupMessages.groupId, id));
+    await db.delete(groupMembers).where(eq(groupMembers.groupId, id));
+    await db.delete(groups).where(eq(groups.id, id));
   }
 }
 

@@ -5,7 +5,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { type User, insertUserSchema, insertShiftSchema, insertActivitySchema, insertMessageSchema, insertCompanySchema, insertActivityTypeSchema, insertSalesRecordSchema, insertCompanySettingsSchema } from "@shared/schema";
+import { type User, insertUserSchema, insertShiftSchema, insertActivitySchema, insertMessageSchema, insertCompanySchema, insertActivityTypeSchema, insertSalesRecordSchema, insertCompanySettingsSchema, insertGroupSchema, insertGroupMessageSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -787,6 +787,171 @@ export async function registerRoutes(
       res.status(500).json({ message: "Mesaj güncellenemedi" });
     }
   });
+
+  // ─── Group routes ─────────────────────────────────────────────────────────
+
+  // List groups the current user belongs to
+  app.get("/api/groups", requireAuth, async (req: any, res: any) => {
+    try {
+      const userId = req.user.id;
+      const userGroups = await storage.getGroupsByUser(userId);
+      // Attach member counts
+      const result = await Promise.all(userGroups.map(async g => {
+        const members = await storage.getGroupMembers(g.id);
+        return { ...g, memberCount: members.length };
+      }));
+      res.json({ groups: result });
+    } catch (error) {
+      console.error("Get groups error:", error);
+      res.status(500).json({ message: "Gruplar alınamadı" });
+    }
+  });
+
+  // Create a group (manager or super_admin)
+  app.post("/api/groups", requireAuth, async (req: any, res: any) => {
+    try {
+      const user: User = req.user;
+      if (user.role !== "manager" && user.role !== "super_admin") {
+        return res.status(403).json({ message: "Sadece yöneticiler grup oluşturabilir" });
+      }
+      const { name, memberIds } = req.body;
+      if (!name?.trim()) return res.status(400).json({ message: "Grup adı gerekli" });
+
+      const group = await storage.createGroup({
+        name: name.trim(),
+        companyId: user.companyId || null,
+        createdBy: user.id,
+      });
+
+      // Add creator + selected members
+      const allIds: string[] = Array.from(new Set([user.id, ...(memberIds || [])]));
+      for (const uid of allIds) {
+        await storage.addGroupMember(group.id, uid);
+      }
+
+      res.json({ group });
+    } catch (error) {
+      console.error("Create group error:", error);
+      res.status(500).json({ message: "Grup oluşturulamadı" });
+    }
+  });
+
+  // Get group members (with user details)
+  app.get("/api/groups/:id/members", requireAuth, async (req: any, res: any) => {
+    try {
+      const groupId = req.params.id;
+      const isMember = await storage.isGroupMember(groupId, req.user.id);
+      if (!isMember) return res.status(403).json({ message: "Bu gruba erişim yetkiniz yok" });
+
+      const members = await storage.getGroupMembers(groupId);
+      const allUsers = await storage.getAllUsers();
+      const userMap = new Map(allUsers.map(u => [u.id, u]));
+      const result = members.map(m => {
+        const u = userMap.get(m.userId);
+        return { ...m, user: u ? { id: u.id, fullName: u.fullName, role: u.role, department: u.department } : null };
+      });
+      res.json({ members: result });
+    } catch (error) {
+      console.error("Get group members error:", error);
+      res.status(500).json({ message: "Üyeler alınamadı" });
+    }
+  });
+
+  // Add member to group
+  app.post("/api/groups/:id/members", requireAuth, async (req: any, res: any) => {
+    try {
+      const user: User = req.user;
+      const group = await storage.getGroup(req.params.id);
+      if (!group) return res.status(404).json({ message: "Grup bulunamadı" });
+      if (group.createdBy !== user.id && user.role !== "super_admin") {
+        return res.status(403).json({ message: "Yetkiniz yok" });
+      }
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ message: "Kullanıcı ID gerekli" });
+      const member = await storage.addGroupMember(group.id, userId);
+      res.json({ member });
+    } catch (error) {
+      console.error("Add group member error:", error);
+      res.status(500).json({ message: "Üye eklenemedi" });
+    }
+  });
+
+  // Remove member from group
+  app.delete("/api/groups/:id/members/:userId", requireAuth, async (req: any, res: any) => {
+    try {
+      const user: User = req.user;
+      const group = await storage.getGroup(req.params.id);
+      if (!group) return res.status(404).json({ message: "Grup bulunamadı" });
+      if (group.createdBy !== user.id && user.role !== "super_admin" && req.params.userId !== user.id) {
+        return res.status(403).json({ message: "Yetkiniz yok" });
+      }
+      await storage.removeGroupMember(group.id, req.params.userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Remove group member error:", error);
+      res.status(500).json({ message: "Üye kaldırılamadı" });
+    }
+  });
+
+  // Delete group
+  app.delete("/api/groups/:id", requireAuth, async (req: any, res: any) => {
+    try {
+      const user: User = req.user;
+      const group = await storage.getGroup(req.params.id);
+      if (!group) return res.status(404).json({ message: "Grup bulunamadı" });
+      if (group.createdBy !== user.id && user.role !== "super_admin") {
+        return res.status(403).json({ message: "Yetkiniz yok" });
+      }
+      await storage.deleteGroup(group.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete group error:", error);
+      res.status(500).json({ message: "Grup silinemedi" });
+    }
+  });
+
+  // Get group messages
+  app.get("/api/groups/:id/messages", requireAuth, async (req: any, res: any) => {
+    try {
+      const groupId = req.params.id;
+      const isMember = await storage.isGroupMember(groupId, req.user.id);
+      if (!isMember) return res.status(403).json({ message: "Bu gruba erişim yetkiniz yok" });
+      const msgs = await storage.getGroupMessages(groupId);
+      res.json({ messages: msgs });
+    } catch (error) {
+      console.error("Get group messages error:", error);
+      res.status(500).json({ message: "Mesajlar alınamadı" });
+    }
+  });
+
+  // Send group message
+  app.post("/api/groups/:id/messages", requireAuth, async (req: any, res: any) => {
+    try {
+      const groupId = req.params.id;
+      const senderId = req.user.id;
+      const isMember = await storage.isGroupMember(groupId, senderId);
+      if (!isMember) return res.status(403).json({ message: "Bu gruba erişim yetkiniz yok" });
+
+      const { content, fileUrl, fileName, fileSize, fileType } = req.body;
+      if (!content?.trim() && !fileUrl) return res.status(400).json({ message: "Mesaj içeriği gerekli" });
+
+      const msg = await storage.createGroupMessage({
+        groupId,
+        senderId,
+        content: content || null,
+        fileUrl: fileUrl || null,
+        fileName: fileName || null,
+        fileSize: fileSize || null,
+        fileType: fileType || null,
+      });
+      res.json({ message: msg });
+    } catch (error) {
+      console.error("Send group message error:", error);
+      res.status(500).json({ message: "Mesaj gönderilemedi" });
+    }
+  });
+
+  // ─── User routes ───────────────────────────────────────────────────────────
 
   // User routes
   app.get("/api/users", requireAuth, async (req: any, res) => {

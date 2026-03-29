@@ -58,7 +58,10 @@ Preferred communication style: Simple, everyday language.
 - `users` - Employee accounts with role-based access (employee/manager), departments, and profile information
 - `shifts` - Work shift tracking with start/end times, duration, and geolocation data
 - `activities` - Granular activity logging during shifts with types, durations, and notes
-- `messages` - Internal messaging system with file attachment support and read status tracking
+- `messages` - Internal 1-to-1 messaging system with file attachment support and read status tracking
+- `groups` - Company group chats (name, companyId, createdBy)
+- `group_members` - Many-to-many: which users belong to which groups
+- `group_messages` - Messages sent within a group (senderId, groupId, file support)
 
 **Schema Management**: Drizzle Kit for migrations, with schemas defined in TypeScript and validated using Zod.
 
