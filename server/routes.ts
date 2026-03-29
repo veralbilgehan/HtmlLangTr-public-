@@ -977,32 +977,47 @@ export async function registerRoutes(
     try {
       const { userId, dateFilter } = req.query;
       const user = req.user;
-      
-      if (user.role !== 'manager' && user.role !== 'super_admin') {
-        return res.status(403).json({ message: "Yetkiniz yok" });
-      }
+      const isManagerOrAdmin = user.role === 'manager' || user.role === 'super_admin';
 
-      let shifts = await storage.getAllShifts(user.companyId);
-      
-      if (userId && userId !== 'all') {
-        shifts = shifts.filter(s => s.userId === userId);
+      let shifts: any[];
+      if (isManagerOrAdmin) {
+        shifts = await storage.getAllShifts(user.companyId);
+        if (userId && userId !== 'all') {
+          shifts = shifts.filter((s: any) => s.userId === userId);
+        }
+      } else {
+        shifts = await storage.getUserShifts(user.id);
       }
 
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const startOfWeek = new Date(startOfDay);
-      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1);
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
       if (dateFilter === 'today') {
-        shifts = shifts.filter(s => new Date(s.startTime) >= startOfDay);
+        shifts = shifts.filter((s: any) => new Date(s.startTime) >= startOfDay);
       } else if (dateFilter === 'week') {
-        shifts = shifts.filter(s => new Date(s.startTime) >= startOfWeek);
+        shifts = shifts.filter((s: any) => new Date(s.startTime) >= startOfWeek);
       } else if (dateFilter === 'month') {
-        shifts = shifts.filter(s => new Date(s.startTime) >= startOfMonth);
+        shifts = shifts.filter((s: any) => new Date(s.startTime) >= startOfMonth);
       }
 
-      res.json({ shifts });
+      const allUsers = isManagerOrAdmin
+        ? await storage.getCompanyUsers(user.companyId)
+        : [await storage.getUser(user.id)];
+      const userMap: Record<string, any> = {};
+      for (const u of allUsers) {
+        if (u) userMap[u.id] = u;
+      }
+
+      const enriched = shifts.map((s: any) => ({
+        ...s,
+        userFullName: userMap[s.userId]?.fullName || "Bilinmeyen",
+        userDepartment: userMap[s.userId]?.department || "-",
+      }));
+
+      res.json({ shifts: enriched, users: allUsers });
     } catch (error) {
       console.error("Get report shifts error:", error);
       res.status(500).json({ message: "Mesai verileri alınamadı" });

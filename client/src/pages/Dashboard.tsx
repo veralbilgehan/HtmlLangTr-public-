@@ -8,15 +8,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Activity, MessageSquare, Settings, Users, Building2, Menu } from "lucide-react";
+import { LogOut, Activity, MessageSquare, Settings, Users, Building2, Menu, BarChart2 } from "lucide-react";
 import PerformanceView from "@/components/PerformanceView";
 import ChatInterface from "@/components/ChatInterface";
 import UserManagement from "@/components/UserManagement";
 import CompanyManagement from "@/components/CompanyManagement";
 import ActivitySettings from "@/components/ActivitySettings";
+import Reports from "@/components/Reports";
 import { getCurrentUser, getCurrentCompany, logout, type User, type Company } from "@/lib/auth";
 
-type TabType = "performance" | "chat" | "users" | "settings" | "companies";
+type TabType = "performance" | "chat" | "users" | "settings" | "companies" | "reports";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -132,7 +133,14 @@ export default function Dashboard() {
               >
                 <MessageSquare className="h-4 w-4 mr-2" /> Sohbet
               </DropdownMenuItem>
-              
+              <DropdownMenuItem
+                onClick={() => setActiveTab("reports")}
+                data-testid="menu-reports"
+                className={activeTab === "reports" ? "bg-blue-50 text-primary" : ""}
+              >
+                <BarChart2 className="h-4 w-4 mr-2" /> Raporlar
+              </DropdownMenuItem>
+
               {/* Manager/Admin Options */}
               {isManager && (
                 <>
@@ -176,6 +184,7 @@ export default function Dashboard() {
           <div className="flex items-center px-4 py-4 text-sm text-muted-foreground border-l">
             {activeTab === "performance" && <><Activity className="h-4 w-4 mr-2 text-primary" /> Mesaim</>}
             {activeTab === "chat" && <><MessageSquare className="h-4 w-4 mr-2 text-primary" /> Sohbet</>}
+            {activeTab === "reports" && <><BarChart2 className="h-4 w-4 mr-2 text-primary" /> Raporlar</>}
             {activeTab === "users" && <><Users className="h-4 w-4 mr-2 text-primary" /> Kullanıcılar</>}
             {activeTab === "companies" && <><Building2 className="h-4 w-4 mr-2 text-primary" /> Şirketler</>}
             {activeTab === "settings" && <><Settings className="h-4 w-4 mr-2 text-primary" /> Ayarlar</>}
@@ -186,6 +195,7 @@ export default function Dashboard() {
         <main className="flex-1 p-6 bg-slate-50/30 overflow-y-auto">
           {activeTab === "performance" && <PerformanceView user={user} />}
           {activeTab === "chat" && <ChatInterface user={user} />}
+          {activeTab === "reports" && <Reports user={user} />}
           {activeTab === "users" && isManager && <UserManagement user={user} />}
           {activeTab === "companies" && isSuperAdmin && <CompanyManagement user={user} />}
           {activeTab === "settings" && isManager && <ActivitySettings user={user} />}
