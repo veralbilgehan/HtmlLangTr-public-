@@ -623,12 +623,24 @@ export async function registerRoutes(
   });
 
   // File upload endpoint
-  app.post("/api/upload", requireAuth, upload.single("file"), async (req: any, res) => {
+  app.post("/api/upload", requireAuth, (req: any, res: any, next: any) => {
+    upload.single("file")(req, res, (err: any) => {
+      if (err) {
+        console.error("Multer error:", err.message, err.code);
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ message: "Dosya boyutu 10MB sınırını aşıyor" });
+        }
+        return res.status(400).json({ message: err.message || "Dosya yüklenemedi" });
+      }
+      next();
+    });
+  }, async (req: any, res: any) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "Dosya yüklenmedi" });
       }
 
+      console.log("File uploaded:", req.file.originalname, req.file.mimetype, req.file.size);
       const fileUrl = `/uploads/${req.file.filename}`;
       res.json({
         fileUrl,
