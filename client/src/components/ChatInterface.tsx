@@ -658,7 +658,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
       )}
 
       {/* Sidebar */}
-      <div className="w-full md:w-1/4 h-1/3 md:h-full bg-slate-50 border-b md:border-b-0 md:border-r flex flex-col shrink-0">
+      <div className="w-full md:w-1/4 h-[43%] md:h-full bg-slate-50 border-b md:border-b-0 md:border-r flex flex-col shrink-0">
         {/* Search + Yeni Grup butonu */}
         <div className="p-2 border-b bg-white flex items-center gap-1">
           <div className="relative flex-1">
@@ -745,7 +745,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
       </div>
 
       {/* Main Chat Area */}
-      <div className="w-full md:w-3/4 h-2/3 md:h-full flex flex-col bg-white min-w-0">
+      <div className="w-full md:w-3/4 h-[57%] md:h-full flex flex-col bg-white min-w-0">
         {activeUser ? (
           <>
             {/* Direct chat header */}
