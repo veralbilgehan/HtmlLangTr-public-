@@ -695,7 +695,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                 <div
                   key={chatUser.id}
                   onClick={() => { setActiveUser(chatUser); setActiveGroup(null); }}
-                  className={cn("p-3 cursor-pointer hover:bg-slate-100 transition-colors border-b border-slate-100", activeUser?.id === chatUser.id && !activeGroup && "bg-blue-50 hover:bg-blue-50")}
+                  className={cn("py-1.5 px-3 cursor-pointer hover:bg-slate-100 transition-colors border-b border-slate-100", activeUser?.id === chatUser.id && !activeGroup && "bg-blue-50 hover:bg-blue-50")}
                   data-testid={`user-${chatUser.id}`}
                 >
                   <div className="flex items-center justify-between">
@@ -718,7 +718,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                 <div
                   key={group.id}
                   onClick={() => { setActiveGroup(group); setActiveUser(null); }}
-                  className={cn("p-3 cursor-pointer hover:bg-slate-100 transition-colors border-b border-slate-100", activeGroup?.id === group.id && "bg-blue-50 hover:bg-blue-50")}
+                  className={cn("py-1.5 px-3 cursor-pointer hover:bg-slate-100 transition-colors border-b border-slate-100", activeGroup?.id === group.id && "bg-blue-50 hover:bg-blue-50")}
                   data-testid={`group-${group.id}`}
                 >
                   <div className="flex items-center gap-2">
