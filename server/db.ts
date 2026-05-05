@@ -1,15 +1,28 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
-import * as schema from "@shared/schema";
+import sql from "mssql";
 
-neonConfig.webSocketConstructor = ws;
+const config: sql.config = {
+  server: process.env.MSSQL_HOST || "bigshare.tr",
+  port: parseInt(process.env.MSSQL_PORT || "8000"),
+  user: process.env.MSSQL_USER || "bilgehan",
+  password: process.env.MSSQL_PASSWORD,
+  database: process.env.MSSQL_DATABASE || "bigshare",
+  options: {
+    encrypt: false,
+    trustServerCertificate: true,
+    enableArithAbort: true,
+  },
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000,
+  },
+};
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
+export const pool = new sql.ConnectionPool(config);
+export const poolConnect = pool.connect();
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle({ client: pool, schema });
+pool.on("error", (err) => {
+  console.error("MSSQL pool error:", err);
+});
+
+export { sql };

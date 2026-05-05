@@ -2,14 +2,13 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
+import MemoryStore from "memorystore";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { type User, insertUserSchema, insertShiftSchema, insertActivitySchema, insertMessageSchema, insertCompanySchema, insertActivityTypeSchema, insertSalesRecordSchema, insertCompanySettingsSchema, insertGroupSchema, insertGroupMessageSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import pg from "pg";
 
 // Configure multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -85,20 +84,12 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // PostgreSQL session store
-  const PgSession = connectPgSimple(session);
-  const pgPool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-  });
+  // Memory session store (MSSQL'e geçildi, pg session store kaldırıldı)
+  const MStore = MemoryStore(session);
 
-  // Session middleware with PostgreSQL store
   app.use(
     session({
-      store: new PgSession({
-        pool: pgPool,
-        tableName: "session",
-        createTableIfMissing: true,
-      }),
+      store: new MStore({ checkPeriod: 86400000 }),
       secret: process.env.SESSION_SECRET || "turkish-company-secret-key-2024",
       resave: false,
       saveUninitialized: false,

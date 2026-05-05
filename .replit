@@ -45,3 +45,12 @@ integrations = ["javascript_database:1.0.0"]
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 120000
+
+[userenv]
+
+[userenv.shared]
+MSSQL_HOST = "bigshare.tr"
+MSSQL_PORT = "8000"
+MSSQL_USER = "bilgehan"
+MSSQL_DATABASE = "bigshare"
+MSSQL_PASSWORD = "bhv140365"

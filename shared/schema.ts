@@ -1,169 +1,241 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, doublePrecision } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const companies = pgTable("companies", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  address: text("address"),
-  phone: text("phone"),
-  email: text("email"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+// ─── Companies ───────────────────────────────────────────────────────────────
+export interface Company {
+  id: string;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  createdAt: Date | null;
+}
 
-export const insertCompanySchema = createInsertSchema(companies).omit({ id: true, createdAt: true });
+export const insertCompanySchema = z.object({
+  name: z.string().min(1),
+  address: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+});
 export type InsertCompany = z.infer<typeof insertCompanySchema>;
-export type Company = typeof companies.$inferSelect;
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  fullName: text("full_name").notNull(),
-  role: text("role").notNull().default('employee'),
-  companyId: varchar("company_id").references(() => companies.id),
-  department: text("department"),
-  avatar: text("avatar"),
+// ─── Users ────────────────────────────────────────────────────────────────────
+export interface User {
+  id: string;
+  username: string;
+  password: string;
+  fullName: string;
+  role: string;
+  companyId: string | null;
+  department: string | null;
+  avatar: string | null;
+}
+
+export const insertUserSchema = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1),
+  fullName: z.string().min(1),
+  role: z.string().default("employee"),
+  companyId: z.string().optional().nullable(),
+  department: z.string().optional().nullable(),
+  avatar: z.string().optional().nullable(),
 });
-
-export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
 
-export const activityTypes = pgTable("activity_types", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  companyId: varchar("company_id").references(() => companies.id),
-  name: text("name").notNull(),
-  category: text("category").notNull().default('activity'),
-  points: integer("points").notNull().default(1),
-  isDefault: boolean("is_default").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
+// ─── Activity Types ───────────────────────────────────────────────────────────
+export interface ActivityType {
+  id: string;
+  companyId: string | null;
+  name: string;
+  category: string;
+  points: number;
+  isDefault: boolean | null;
+  createdAt: Date | null;
+}
+
+export const insertActivityTypeSchema = z.object({
+  companyId: z.string().optional().nullable(),
+  name: z.string().min(1),
+  category: z.string().default("activity"),
+  points: z.number().int().default(1),
+  isDefault: z.boolean().optional().nullable(),
 });
-
-export const insertActivityTypeSchema = createInsertSchema(activityTypes).omit({ id: true, createdAt: true });
 export type InsertActivityType = z.infer<typeof insertActivityTypeSchema>;
-export type ActivityType = typeof activityTypes.$inferSelect;
 
-export const shifts = pgTable("shifts", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  companyId: varchar("company_id").references(() => companies.id),
-  startTime: timestamp("start_time").notNull(),
-  endTime: timestamp("end_time"),
-  durationSeconds: integer("duration_seconds"),
-  startLatitude: doublePrecision("start_latitude"),
-  startLongitude: doublePrecision("start_longitude"),
-  endLatitude: doublePrecision("end_latitude"),
-  endLongitude: doublePrecision("end_longitude"),
-  createdAt: timestamp("created_at").defaultNow(),
+// ─── Shifts ───────────────────────────────────────────────────────────────────
+export interface Shift {
+  id: string;
+  userId: string;
+  companyId: string | null;
+  startTime: Date;
+  endTime: Date | null;
+  durationSeconds: number | null;
+  startLatitude: number | null;
+  startLongitude: number | null;
+  endLatitude: number | null;
+  endLongitude: number | null;
+  createdAt: Date | null;
+}
+
+export const insertShiftSchema = z.object({
+  userId: z.string(),
+  companyId: z.string().optional().nullable(),
+  startTime: z.coerce.date(),
+  endTime: z.coerce.date().optional().nullable(),
+  durationSeconds: z.number().int().optional().nullable(),
+  startLatitude: z.number().optional().nullable(),
+  startLongitude: z.number().optional().nullable(),
+  endLatitude: z.number().optional().nullable(),
+  endLongitude: z.number().optional().nullable(),
 });
-
-export const insertShiftSchema = createInsertSchema(shifts).omit({ id: true, createdAt: true });
 export type InsertShift = z.infer<typeof insertShiftSchema>;
-export type Shift = typeof shifts.$inferSelect;
 
-export const activities = pgTable("activities", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  companyId: varchar("company_id").references(() => companies.id),
-  shiftId: varchar("shift_id").references(() => shifts.id),
-  activityTypeId: varchar("activity_type_id").references(() => activityTypes.id),
-  type: text("type").notNull(),
-  startTime: timestamp("start_time").notNull(),
-  endTime: timestamp("end_time"),
-  durationMinutes: integer("duration_minutes"),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
+// ─── Activities ───────────────────────────────────────────────────────────────
+export interface Activity {
+  id: string;
+  userId: string;
+  companyId: string | null;
+  shiftId: string | null;
+  activityTypeId: string | null;
+  type: string;
+  startTime: Date;
+  endTime: Date | null;
+  durationMinutes: number | null;
+  notes: string | null;
+  createdAt: Date | null;
+}
+
+export const insertActivitySchema = z.object({
+  userId: z.string(),
+  companyId: z.string().optional().nullable(),
+  shiftId: z.string().optional().nullable(),
+  activityTypeId: z.string().optional().nullable(),
+  type: z.string().min(1),
+  startTime: z.coerce.date(),
+  endTime: z.coerce.date().optional().nullable(),
+  durationMinutes: z.number().int().optional().nullable(),
+  notes: z.string().optional().nullable(),
 });
-
-export const insertActivitySchema = createInsertSchema(activities).omit({ id: true, createdAt: true });
 export type InsertActivity = z.infer<typeof insertActivitySchema>;
-export type Activity = typeof activities.$inferSelect;
 
-export const salesRecords = pgTable("sales_records", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  companyId: varchar("company_id").references(() => companies.id),
-  shiftId: varchar("shift_id").references(() => shifts.id),
-  activityTypeId: varchar("activity_type_id").references(() => activityTypes.id),
-  type: text("type").notNull(),
-  quantity: integer("quantity").default(1),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
+// ─── Sales Records ────────────────────────────────────────────────────────────
+export interface SalesRecord {
+  id: string;
+  userId: string;
+  companyId: string | null;
+  shiftId: string | null;
+  activityTypeId: string | null;
+  type: string;
+  quantity: number | null;
+  notes: string | null;
+  createdAt: Date | null;
+}
+
+export const insertSalesRecordSchema = z.object({
+  userId: z.string(),
+  companyId: z.string().optional().nullable(),
+  shiftId: z.string().optional().nullable(),
+  activityTypeId: z.string().optional().nullable(),
+  type: z.string().min(1),
+  quantity: z.number().int().optional().nullable(),
+  notes: z.string().optional().nullable(),
 });
-
-export const insertSalesRecordSchema = createInsertSchema(salesRecords).omit({ id: true, createdAt: true });
 export type InsertSalesRecord = z.infer<typeof insertSalesRecordSchema>;
-export type SalesRecord = typeof salesRecords.$inferSelect;
 
-export const companySettings = pgTable("company_settings", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  companyId: varchar("company_id").notNull().unique().references(() => companies.id),
-  shiftStartTime: text("shift_start_time").notNull().default("09:00"),
-  shiftEndTime: text("shift_end_time").notNull().default("18:00"),
-  lateThresholdMinutes: integer("late_threshold_minutes").notNull().default(15),
-  lateWarning1: text("late_warning1").notNull().default("Mesai saatinde işyerinde olmadığınızdan kanuna ilişkin mazeretinizi bildiriniz."),
-  lateWarning2: text("late_warning2").notNull().default("Mesai başlangıç saatini geçmenize rağmen mesainizi başlatmadınız. Lütfen durumu yöneticinize bildirin."),
-  lateWarning3: text("late_warning3").notNull().default("Devamsızlık tutanağı düzenlenecektir. En kısa sürede işyerinizde bulununuz."),
-  updatedAt: timestamp("updated_at").defaultNow(),
+// ─── Company Settings ─────────────────────────────────────────────────────────
+export interface CompanySettings {
+  id: string;
+  companyId: string;
+  shiftStartTime: string;
+  shiftEndTime: string;
+  lateThresholdMinutes: number;
+  lateWarning1: string;
+  lateWarning2: string;
+  lateWarning3: string;
+  updatedAt: Date | null;
+}
+
+export const insertCompanySettingsSchema = z.object({
+  companyId: z.string(),
+  shiftStartTime: z.string().default("09:00"),
+  shiftEndTime: z.string().default("18:00"),
+  lateThresholdMinutes: z.number().int().default(15),
+  lateWarning1: z.string().default("Mesai saatinde işyerinde olmadığınızdan kanuna ilişkin mazeretinizi bildiriniz."),
+  lateWarning2: z.string().default("Mesai başlangıç saatini geçmenize rağmen mesainizi başlatmadınız. Lütfen durumu yöneticinize bildirin."),
+  lateWarning3: z.string().default("Devamsızlık tutanağı düzenlenecektir. En kısa sürede işyerinizde bulununuz."),
 });
-
-export const insertCompanySettingsSchema = createInsertSchema(companySettings).omit({ id: true, updatedAt: true });
 export type InsertCompanySettings = z.infer<typeof insertCompanySettingsSchema>;
-export type CompanySettings = typeof companySettings.$inferSelect;
 
-export const groups = pgTable("groups", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  companyId: varchar("company_id").references(() => companies.id),
-  createdBy: varchar("created_by").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
+// ─── Groups ───────────────────────────────────────────────────────────────────
+export interface Group {
+  id: string;
+  name: string;
+  companyId: string | null;
+  createdBy: string | null;
+  createdAt: Date | null;
+}
+
+export const insertGroupSchema = z.object({
+  name: z.string().min(1),
+  companyId: z.string().optional().nullable(),
+  createdBy: z.string().optional().nullable(),
 });
-
-export const insertGroupSchema = createInsertSchema(groups).omit({ id: true, createdAt: true });
 export type InsertGroup = z.infer<typeof insertGroupSchema>;
-export type Group = typeof groups.$inferSelect;
 
-export const groupMembers = pgTable("group_members", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  groupId: varchar("group_id").notNull().references(() => groups.id),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  joinedAt: timestamp("joined_at").defaultNow(),
+// ─── Group Members ────────────────────────────────────────────────────────────
+export interface GroupMember {
+  id: string;
+  groupId: string;
+  userId: string;
+  joinedAt: Date | null;
+}
+
+// ─── Group Messages ───────────────────────────────────────────────────────────
+export interface GroupMessage {
+  id: string;
+  groupId: string;
+  senderId: string;
+  content: string | null;
+  fileUrl: string | null;
+  fileName: string | null;
+  fileSize: number | null;
+  fileType: string | null;
+  createdAt: Date | null;
+}
+
+export const insertGroupMessageSchema = z.object({
+  groupId: z.string(),
+  senderId: z.string(),
+  content: z.string().optional().nullable(),
+  fileUrl: z.string().optional().nullable(),
+  fileName: z.string().optional().nullable(),
+  fileSize: z.number().int().optional().nullable(),
+  fileType: z.string().optional().nullable(),
 });
-
-export type GroupMember = typeof groupMembers.$inferSelect;
-
-export const groupMessages = pgTable("group_messages", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  groupId: varchar("group_id").notNull().references(() => groups.id),
-  senderId: varchar("sender_id").notNull().references(() => users.id),
-  content: text("content"),
-  fileUrl: text("file_url"),
-  fileName: text("file_name"),
-  fileSize: integer("file_size"),
-  fileType: text("file_type"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const insertGroupMessageSchema = createInsertSchema(groupMessages).omit({ id: true, createdAt: true });
 export type InsertGroupMessage = z.infer<typeof insertGroupMessageSchema>;
-export type GroupMessage = typeof groupMessages.$inferSelect;
 
-export const messages = pgTable("messages", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  senderId: varchar("sender_id").notNull().references(() => users.id),
-  recipientId: varchar("recipient_id").notNull().references(() => users.id),
-  companyId: varchar("company_id").references(() => companies.id),
-  content: text("content"),
-  fileUrl: text("file_url"),
-  fileName: text("file_name"),
-  fileSize: integer("file_size"),
-  fileType: text("file_type"),
-  read: boolean("read").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
+// ─── Messages ─────────────────────────────────────────────────────────────────
+export interface Message {
+  id: string;
+  senderId: string;
+  recipientId: string;
+  companyId: string | null;
+  content: string | null;
+  fileUrl: string | null;
+  fileName: string | null;
+  fileSize: number | null;
+  fileType: string | null;
+  read: boolean | null;
+  createdAt: Date | null;
+}
+
+export const insertMessageSchema = z.object({
+  senderId: z.string(),
+  recipientId: z.string(),
+  companyId: z.string().optional().nullable(),
+  content: z.string().optional().nullable(),
+  fileUrl: z.string().optional().nullable(),
+  fileName: z.string().optional().nullable(),
+  fileSize: z.number().int().optional().nullable(),
+  fileType: z.string().optional().nullable(),
 });
-
-export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, read: true });
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
-export type Message = typeof messages.$inferSelect;
