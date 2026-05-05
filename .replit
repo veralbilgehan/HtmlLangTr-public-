@@ -50,7 +50,7 @@ timeoutMs = 120000
 
 [userenv.shared]
 MSSQL_HOST = "bigshare.tr"
-MSSQL_PORT = "8000"
+MSSQL_PORT = "1585"
 MSSQL_USER = "bilgehan"
 MSSQL_DATABASE = "bigshare"
 MSSQL_PASSWORD = "bhv140365"

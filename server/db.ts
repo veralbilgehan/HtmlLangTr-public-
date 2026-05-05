@@ -2,7 +2,7 @@ import sql from "mssql";
 
 const config: sql.config = {
   server: process.env.MSSQL_HOST || "bigshare.tr",
-  port: parseInt(process.env.MSSQL_PORT || "8000"),
+  port: parseInt(process.env.MSSQL_PORT || "1585"),
   user: process.env.MSSQL_USER || "bilgehan",
   password: process.env.MSSQL_PASSWORD,
   database: process.env.MSSQL_DATABASE || "bigshare",
