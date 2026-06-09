@@ -119,6 +119,10 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                 ...prev,
                 [u.id]: last.content || (last.fileName ? "📎 " + last.fileName : "")
               }));
+              setLastMessageTimesMap(prev => ({
+                ...prev,
+                [u.id]: last.createdAt
+              }));
             }
           }
         } catch {}
@@ -126,6 +130,16 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
     };
     prefetch();
   }, [users]);
+
+  const formatShortTime = (iso: string) => {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
+    if (diffDays === 0) return d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+    if (diffDays === 1) return "Dün";
+    if (diffDays < 7) return d.toLocaleDateString("tr-TR", { weekday: "short" });
+    return d.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit" });
+  };
 
   useEffect(() => {
     if (activeUser) {
@@ -476,9 +490,11 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
   // Slide panel state
   const [chatOpen, setChatOpen] = useState(false);
+  const [searchVisible, setSearchVisible] = useState(false);
 
   // Last messages map
   const [lastMessagesMap, setLastMessagesMap] = useState<Record<string, string>>({});
+  const [lastMessageTimesMap, setLastMessageTimesMap] = useState<Record<string, string>>({});
 
   const filteredUsers = users.filter(u => {
     const matchesSearch =
@@ -711,95 +727,132 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         style={{ width: "200%", transform: chatOpen ? "translateX(-50%)" : "translateX(0)" }}
       >
         {/* Panel 1: Contact list */}
-        <div className="flex flex-col bg-white overflow-hidden" style={{ width: "50%", flexShrink: 0, height: "100%" }}>
-          {/* Başlık satırı: Son Sohbetler + Yeni Grup */}
-          <div className="px-3 pt-2 pb-1 flex items-center justify-between shrink-0">
-            <span className="text-sm font-semibold text-slate-700">Son Sohbetler</span>
-            {isManager && (
-              <button
-                onClick={() => setShowCreateGroup(true)}
-                className="h-7 w-7 flex items-center justify-center rounded-md text-primary hover:bg-blue-50 border border-slate-200 bg-white shrink-0"
-                title="Yeni Grup Oluştur"
-                data-testid="button-new-group"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-          {/* Arama çubuğu */}
-          <div className="px-2 pb-2 shrink-0">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Kişi veya grup ara..."
-                className="pl-7 bg-slate-50 h-8 text-sm"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                data-testid="input-search"
-              />
-            </div>
+        <div className="flex flex-col bg-white overflow-hidden relative" style={{ width: "50%", flexShrink: 0, height: "100%" }}>
+
+          {/* Header */}
+          <div className="px-3 pt-3 pb-2 flex items-center justify-between shrink-0">
+            <span className="text-base font-bold text-primary">Mesajlar</span>
+            <button
+              onClick={() => { setSearchVisible(v => !v); if (searchVisible) setSearchTerm(""); }}
+              className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-blue-50 text-primary"
+              data-testid="button-toggle-search"
+            >
+              <Search className="h-4 w-4" />
+            </button>
           </div>
 
-          {/* List */}
+          {/* Arama çubuğu (toggle) */}
+          {searchVisible && (
+            <div className="px-3 pb-2 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  autoFocus
+                  placeholder="Sohbet, kişi ara..."
+                  className="pl-8 bg-slate-100 h-8 text-sm rounded-full border-0"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  data-testid="input-search"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Story / Hızlı erişim avatarlar */}
+          {!searchTerm && (
+            <div className="px-3 pb-2 shrink-0">
+              <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
+                {users.slice(0, 8).map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => openChat(u, null)}
+                    className="flex flex-col items-center gap-1 shrink-0"
+                    data-testid={`story-${u.id}`}
+                  >
+                    <div className="relative">
+                      <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm ring-2 ring-primary/20">
+                        {getInitials(u.fullName)}
+                      </div>
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
+                    </div>
+                    <span className="text-[10px] text-slate-600 max-w-[44px] truncate text-center">{u.fullName.split(" ")[0]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Conversation list */}
           <div className="flex-1 overflow-y-auto">
             {/* Kişiler */}
-            {filteredUsers.length > 0 && (
-              <>
-                {(filteredGroups.length > 0 || !searchTerm) && (
-                  <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Kişiler</p>
-                )}
-                {filteredUsers.map(chatUser => (
-                  <div
-                    key={chatUser.id}
-                    onClick={() => openChat(chatUser, null)}
-                    className="py-2.5 px-3 cursor-pointer hover:bg-slate-50 active:bg-blue-50 transition-colors"
-                    data-testid={`user-${chatUser.id}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-sm text-slate-800">{chatUser.fullName}</h4>
-                      <span className="text-xs text-slate-500 ml-2 shrink-0">{chatUser.department || getRoleLabel(chatUser.role)}</span>
-                    </div>
-                    {lastMessagesMap[chatUser.id] && (
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">{lastMessagesMap[chatUser.id]}</p>
+            {filteredUsers.map(chatUser => (
+              <div
+                key={chatUser.id}
+                onClick={() => openChat(chatUser, null)}
+                className="flex items-center gap-3 py-2.5 px-3 cursor-pointer hover:bg-slate-50 active:bg-blue-50 transition-colors"
+                data-testid={`user-${chatUser.id}`}
+              >
+                {/* Avatar */}
+                <div className="relative shrink-0">
+                  <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                    {getInitials(chatUser.fullName)}
+                  </div>
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
+                </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-sm text-slate-800 truncate">{chatUser.fullName}</h4>
+                    {lastMessageTimesMap[chatUser.id] && (
+                      <span className="text-[10px] text-slate-400 shrink-0 ml-1">{formatShortTime(lastMessageTimesMap[chatUser.id])}</span>
                     )}
                   </div>
-                ))}
-              </>
-            )}
+                  <p className="text-xs text-slate-500 truncate mt-0.5">
+                    {lastMessagesMap[chatUser.id] || chatUser.department || getRoleLabel(chatUser.role)}
+                  </p>
+                </div>
+              </div>
+            ))}
 
             {/* Gruplar */}
-            {filteredGroups.length > 0 && (
-              <>
-                {(filteredUsers.length > 0 || !searchTerm) && (
-                  <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Gruplar</p>
-                )}
-                {filteredGroups.map(group => (
-                  <div
-                    key={group.id}
-                    onClick={() => openChat(null, group)}
-                    className="py-2.5 px-3 cursor-pointer hover:bg-slate-50 active:bg-blue-50 transition-colors"
-                    data-testid={`group-${group.id}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <Users className="h-3 w-3 text-primary" />
-                        </div>
-                        <h4 className="font-semibold text-sm text-slate-800 truncate">{group.name}</h4>
-                      </div>
-                      <span className="text-xs text-slate-500 ml-2 shrink-0">{group.memberCount} üye</span>
-                    </div>
+            {filteredGroups.map(group => (
+              <div
+                key={group.id}
+                onClick={() => openChat(null, group)}
+                className="flex items-center gap-3 py-2.5 px-3 cursor-pointer hover:bg-slate-50 active:bg-blue-50 transition-colors"
+                data-testid={`group-${group.id}`}
+              >
+                <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                  <Users className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-sm text-slate-800 truncate">{group.name}</h4>
+                    <span className="text-[10px] text-slate-400 shrink-0 ml-1">{group.memberCount} üye</span>
                   </div>
-                ))}
-              </>
-            )}
+                  <p className="text-xs text-slate-500 truncate mt-0.5">Grup sohbeti</p>
+                </div>
+              </div>
+            ))}
 
             {filteredUsers.length === 0 && filteredGroups.length === 0 && (
-              <p className="text-center text-muted-foreground text-sm py-8">
-                {searchTerm ? "Sonuç bulunamadı" : "Henüz yazışma yok. Kişi aramak için yukarıdaki arama kutusunu kullanın."}
+              <p className="text-center text-muted-foreground text-sm py-8 px-4">
+                {searchTerm ? "Sonuç bulunamadı" : "Henüz yazışma yok.\nArama ikonuna basarak kişi bulun."}
               </p>
             )}
           </div>
+
+          {/* Floating compose button */}
+          {isManager && (
+            <button
+              onClick={() => setShowCreateGroup(true)}
+              className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-primary text-white shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+              title="Yeni Grup Oluştur"
+              data-testid="button-new-group"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
         {/* Panel 2: Chat area */}
