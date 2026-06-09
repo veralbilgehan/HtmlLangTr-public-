@@ -67,8 +67,7 @@ export default function Dashboard() {
   const isManager = user.role === 'manager' || isSuperAdmin;
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden min-h-[85vh] flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
         {/* Header */}
         <header className="bg-primary text-primary-foreground px-3 md:px-6 py-3 md:py-4 flex items-center justify-between gap-3">
           {/* Sol: Şirket adı + Kullanıcı yan yana */}
@@ -107,7 +106,7 @@ export default function Dashboard() {
         </header>
 
         {/* Navigation - Hamburger Menu */}
-        <nav className="flex border-b bg-white sticky top-0 z-10">
+        <nav className="flex bg-white sticky top-0 z-10">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -169,7 +168,6 @@ export default function Dashboard() {
                   </DropdownMenuItem>
                 </>
               )}
-              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleLogout}
                 data-testid="button-logout"
@@ -181,7 +179,7 @@ export default function Dashboard() {
           </DropdownMenu>
           
           {/* Current page indicator */}
-          <div className="flex items-center px-4 py-4 text-sm text-muted-foreground border-l">
+          <div className="flex items-center px-4 py-4 text-sm text-muted-foreground">
             {activeTab === "performance" && <><Activity className="h-4 w-4 mr-2 text-primary" /> Mesaim</>}
             {activeTab === "chat" && <><MessageSquare className="h-4 w-4 mr-2 text-primary" /> Sohbet</>}
             {activeTab === "reports" && <><BarChart2 className="h-4 w-4 mr-2 text-primary" /> Raporlar</>}
@@ -192,7 +190,7 @@ export default function Dashboard() {
         </nav>
 
         {/* Content */}
-        <main className="flex-1 p-6 bg-slate-50/30 overflow-y-auto">
+        <main className="flex-1 p-6 bg-white overflow-y-auto">
           {activeTab === "performance" && <PerformanceView user={user} />}
           {activeTab === "chat" && <ChatInterface user={user} />}
           {activeTab === "reports" && <Reports user={user} />}
@@ -200,7 +198,6 @@ export default function Dashboard() {
           {activeTab === "companies" && isSuperAdmin && <CompanyManagement user={user} />}
           {activeTab === "settings" && isManager && <ActivitySettings user={user} />}
         </main>
-      </div>
     </div>
   );
 }
