@@ -578,7 +578,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="relative overflow-hidden h-[70vh] bg-white rounded-lg">
+    <div className="relative overflow-hidden flex-1 flex flex-col bg-white" style={{minHeight: 0}}>
       <canvas ref={canvasRef} className="hidden" />
       <input
         id="chat-file-input"

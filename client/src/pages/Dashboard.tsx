@@ -182,7 +182,7 @@ export default function Dashboard() {
         </nav>
 
         {/* Content */}
-        <main className="flex-1 p-6 bg-white overflow-y-auto">
+        <main className={activeTab === "chat" ? "flex-1 flex flex-col min-h-0 bg-white overflow-hidden" : "flex-1 p-6 bg-white overflow-y-auto"}>
           {activeTab === "performance" && <PerformanceView user={user} />}
           {activeTab === "chat" && <ChatInterface user={user} />}
           {activeTab === "reports" && <Reports user={user} />}
