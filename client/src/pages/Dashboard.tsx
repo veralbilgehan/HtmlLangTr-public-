@@ -67,7 +67,7 @@ export default function Dashboard() {
   const isManager = user.role === 'manager' || isSuperAdmin;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="h-screen bg-white flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-primary text-primary-foreground px-3 md:px-6 py-3 md:py-4 flex items-center justify-between gap-3">
           {/* Sol: Şirket adı + Kullanıcı yan yana */}

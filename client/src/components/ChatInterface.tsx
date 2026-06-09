@@ -507,7 +507,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   // ─── Message input bar (shared) ───────────────────────────────────────────
 
   const renderInputBar = () => (
-    <div className="p-2 bg-white border-t shrink-0">
+    <div className="p-2 bg-white shrink-0">
       {selectedFile && (
         <div className="mb-2 px-2 py-2 bg-blue-50 rounded-lg flex items-center gap-2">
           {selectedFile.type.startsWith("image/") ? (
@@ -578,7 +578,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="relative overflow-hidden flex-1 flex flex-col bg-white" style={{minHeight: 0}}>
+    <div className="relative overflow-hidden flex-1 bg-white" style={{minHeight: 0}}>
       <canvas ref={canvasRef} className="hidden" />
       <input
         id="chat-file-input"
@@ -680,7 +680,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
       {/* Sliding container: 2 panels side by side, shifts left when chat open */}
       <div
-        className="flex h-full transition-transform duration-300 ease-in-out"
+        className="absolute inset-0 flex transition-transform duration-300 ease-in-out"
         style={{ width: "200%", transform: chatOpen ? "translateX(-50%)" : "translateX(0)" }}
       >
         {/* Panel 1: Contact list */}
