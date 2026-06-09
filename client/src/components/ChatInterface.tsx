@@ -711,7 +711,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         style={{ width: "200%", transform: chatOpen ? "translateX(-50%)" : "translateX(0)" }}
       >
         {/* Panel 1: Contact list */}
-        <div className="flex flex-col min-h-0 bg-white" style={{ width: "50%", flexShrink: 0 }}>
+        <div className="flex flex-col bg-white overflow-hidden" style={{ width: "50%", flexShrink: 0, height: "100%" }}>
           {/* Başlık satırı: Son Sohbetler + Yeni Grup */}
           <div className="px-3 pt-2 pb-1 flex items-center justify-between shrink-0">
             <span className="text-sm font-semibold text-slate-700">Son Sohbetler</span>
@@ -803,7 +803,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         </div>
 
         {/* Panel 2: Chat area */}
-        <div className="flex flex-col min-h-0 bg-white" style={{ width: "50%", flexShrink: 0 }}>
+        <div className="flex flex-col bg-white overflow-hidden" style={{ width: "50%", flexShrink: 0, height: "100%" }}>
           {activeUser ? (
             <>
               <div className="px-3 py-2 bg-white flex items-center gap-2 shrink-0">
