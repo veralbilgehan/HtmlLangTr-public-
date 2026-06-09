@@ -177,6 +177,10 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
       if (res.ok) {
         const data = await res.json();
         setMessages(data.messages);
+        if (data.messages.length > 0) {
+          const last = data.messages[data.messages.length - 1];
+          setLastMessagesMap(prev => ({ ...prev, [userId]: last.content || (last.fileName ? "📎 " + last.fileName : "") }));
+        }
         if (scrollToBottom) setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
       }
     } catch (e) { console.error("Error fetching messages:", e); }
@@ -458,6 +462,12 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
   const isManager = user.role === "manager" || user.role === "super_admin";
 
+  // Slide panel state
+  const [chatOpen, setChatOpen] = useState(false);
+
+  // Last messages map
+  const [lastMessagesMap, setLastMessagesMap] = useState<Record<string, string>>({});
+
   // User lookup map for group messages
   const userMap = new Map<string, ChatUser>(users.map(u => [u.id, u]));
 
@@ -548,8 +558,27 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
+  const openChat = (chatUser: ChatUser | null, group: ChatGroup | null) => {
+    if (chatUser) { setActiveUser(chatUser); setActiveGroup(null); }
+    else if (group) { setActiveGroup(group); setActiveUser(null); }
+    setChatOpen(true);
+  };
+
+  const closeChat = () => {
+    setChatOpen(false);
+  };
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'super_admin': return 'Süper Admin';
+      case 'manager': return 'Yönetici';
+      case 'employee': return 'Çalışan';
+      default: return role;
+    }
+  };
+
   return (
-    <div className="flex flex-col md:flex-row h-[70vh] md:h-[500px] md:max-h-[70vh] border rounded-lg overflow-hidden bg-white shadow-sm relative">
+    <div className="relative overflow-hidden h-[70vh] bg-white rounded-lg">
       <canvas ref={canvasRef} className="hidden" />
       <input
         id="chat-file-input"
@@ -610,12 +639,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
             <div className="p-4 flex flex-col gap-3 overflow-y-auto flex-1">
               <div>
                 <label className="text-sm font-medium text-slate-700 mb-1 block">Grup Adı</label>
-                <Input
-                  value={newGroupName}
-                  onChange={e => setNewGroupName(e.target.value)}
-                  placeholder="Örn: Satış Ekibi"
-                  data-testid="input-group-name"
-                />
+                <Input value={newGroupName} onChange={e => setNewGroupName(e.target.value)} placeholder="Örn: Satış Ekibi" data-testid="input-group-name" />
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 mb-2 block">
@@ -623,10 +647,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                 </label>
                 <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
                   {users.map(u => (
-                    <label
-                      key={u.id}
-                      className="flex items-center gap-3 p-2.5 hover:bg-slate-50 cursor-pointer border-b last:border-0"
-                    >
+                    <label key={u.id} className="flex items-center gap-3 p-2.5 hover:bg-slate-50 cursor-pointer border-b last:border-0">
                       <input
                         type="checkbox"
                         checked={selectedMemberIds.includes(u.id)}
@@ -638,7 +659,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                       />
                       <div>
                         <p className="text-sm font-medium">{u.fullName}</p>
-                        <p className="text-xs text-muted-foreground">{u.department || u.role}</p>
+                        <p className="text-xs text-muted-foreground">{u.department || getRoleLabel(u.role)}</p>
                       </div>
                     </label>
                   ))}
@@ -657,184 +678,179 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         </div>
       )}
 
-      {/* Sidebar */}
-      <div className="w-full md:w-1/4 h-[43%] md:h-full bg-slate-50 border-b md:border-b-0 md:border-r flex flex-col shrink-0">
-        {/* Search + Yeni Grup butonu */}
-        <div className="p-2 border-b bg-white flex items-center gap-1">
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Kişi veya grup ara..."
-              className="pl-7 bg-slate-50 h-8 text-sm"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              data-testid="input-search"
-            />
+      {/* Sliding container: 2 panels side by side, shifts left when chat open */}
+      <div
+        className="flex h-full transition-transform duration-300 ease-in-out"
+        style={{ width: "200%", transform: chatOpen ? "translateX(-50%)" : "translateX(0)" }}
+      >
+        {/* Panel 1: Contact list */}
+        <div className="h-full flex flex-col bg-white" style={{ width: "50%" }}>
+          {/* Search + Yeni Grup */}
+          <div className="p-2 bg-white flex items-center gap-1 shrink-0">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Kişi veya grup ara..."
+                className="pl-7 bg-slate-50 h-8 text-sm"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                data-testid="input-search"
+              />
+            </div>
+            {isManager && (
+              <button
+                onClick={() => setShowCreateGroup(true)}
+                className="h-8 w-8 flex items-center justify-center rounded-md text-primary hover:bg-blue-50 border border-slate-200 bg-white shrink-0"
+                title="Yeni Grup Oluştur"
+                data-testid="button-new-group"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            )}
           </div>
-          {isManager && (
-            <button
-              onClick={() => setShowCreateGroup(true)}
-              className="h-8 w-8 flex items-center justify-center rounded-md text-primary hover:bg-blue-50 border border-slate-200 bg-white shrink-0"
-              title="Yeni Grup Oluştur"
-              data-testid="button-new-group"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          )}
-        </div>
 
-        {/* Birleşik Liste */}
-        <div className="flex-1 overflow-y-auto">
-          {/* Kişiler bölümü */}
-          {filteredUsers.length > 0 && (
-            <>
-              {(filteredGroups.length > 0 || !searchTerm) && (
-                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Kişiler</p>
-              )}
-              {filteredUsers.map(chatUser => (
-                <div
-                  key={chatUser.id}
-                  onClick={() => { setActiveUser(chatUser); setActiveGroup(null); }}
-                  className={cn("py-1.5 px-3 cursor-pointer hover:bg-slate-100 transition-colors border-b border-slate-100", activeUser?.id === chatUser.id && !activeGroup && "bg-blue-50 hover:bg-blue-50")}
-                  data-testid={`user-${chatUser.id}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-sm truncate">{chatUser.fullName}</h4>
-                    <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">{chatUser.department || chatUser.role}</p>
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* Gruplar bölümü */}
-          {filteredGroups.length > 0 && (
-            <>
-              {(filteredUsers.length > 0 || !searchTerm) && (
-                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Gruplar</p>
-              )}
-              {filteredGroups.map(group => (
-                <div
-                  key={group.id}
-                  onClick={() => { setActiveGroup(group); setActiveUser(null); }}
-                  className={cn("py-1.5 px-3 cursor-pointer hover:bg-slate-100 transition-colors border-b border-slate-100", activeGroup?.id === group.id && "bg-blue-50 hover:bg-blue-50")}
-                  data-testid={`group-${group.id}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Users className="h-3.5 w-3.5 text-primary" />
+          {/* List */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Kişiler */}
+            {filteredUsers.length > 0 && (
+              <>
+                {(filteredGroups.length > 0 || !searchTerm) && (
+                  <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Kişiler</p>
+                )}
+                {filteredUsers.map(chatUser => (
+                  <div
+                    key={chatUser.id}
+                    onClick={() => openChat(chatUser, null)}
+                    className="py-2.5 px-3 cursor-pointer hover:bg-slate-50 active:bg-blue-50 transition-colors"
+                    data-testid={`user-${chatUser.id}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-sm text-slate-800">{chatUser.fullName}</h4>
+                      <span className="text-xs text-slate-500 ml-2 shrink-0">{chatUser.department || getRoleLabel(chatUser.role)}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm truncate">{group.name}</h4>
-                      <p className="text-xs text-muted-foreground">{group.memberCount} üye</p>
+                    {lastMessagesMap[chatUser.id] && (
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">{lastMessagesMap[chatUser.id]}</p>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* Gruplar */}
+            {filteredGroups.length > 0 && (
+              <>
+                {(filteredUsers.length > 0 || !searchTerm) && (
+                  <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Gruplar</p>
+                )}
+                {filteredGroups.map(group => (
+                  <div
+                    key={group.id}
+                    onClick={() => openChat(null, group)}
+                    className="py-2.5 px-3 cursor-pointer hover:bg-slate-50 active:bg-blue-50 transition-colors"
+                    data-testid={`group-${group.id}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <Users className="h-3 w-3 text-primary" />
+                        </div>
+                        <h4 className="font-semibold text-sm text-slate-800 truncate">{group.name}</h4>
+                      </div>
+                      <span className="text-xs text-slate-500 ml-2 shrink-0">{group.memberCount} üye</span>
                     </div>
                   </div>
-                </div>
-              ))}
-            </>
-          )}
+                ))}
+              </>
+            )}
 
-          {/* Hiçbir sonuç yok */}
-          {filteredUsers.length === 0 && filteredGroups.length === 0 && (
-            <p className="text-center text-muted-foreground text-sm py-8">
-              {searchTerm ? "Sonuç bulunamadı" : "Kullanıcı bulunamadı"}
-            </p>
-          )}
+            {filteredUsers.length === 0 && filteredGroups.length === 0 && (
+              <p className="text-center text-muted-foreground text-sm py-8">
+                {searchTerm ? "Sonuç bulunamadı" : "Kullanıcı bulunamadı"}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Main Chat Area */}
-      <div className="w-full md:w-3/4 h-[57%] md:h-full flex flex-col bg-white min-w-0">
-        {activeUser ? (
-          <>
-            {/* Direct chat header */}
-            <div className="p-3 border-b flex items-center justify-between bg-white shrink-0">
-              <div className="flex items-center gap-2">
-                <div>
-                  <h3 className="font-bold text-sm">{activeUser.fullName}</h3>
+        {/* Panel 2: Chat area */}
+        <div className="h-full flex flex-col bg-white" style={{ width: "50%" }}>
+          {activeUser ? (
+            <>
+              <div className="px-3 py-2 bg-white flex items-center gap-2 shrink-0">
+                <button onClick={closeChat} className="p-1 rounded hover:bg-slate-100 text-slate-600" data-testid="button-back-chat">
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-sm leading-tight">{activeUser.fullName}</h3>
                   <p className="text-xs text-green-600 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-600" /> Çevrimiçi
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-600 inline-block" /> Çevrimiçi
                   </p>
                 </div>
               </div>
-            </div>
-
-            {/* Direct messages */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/50">
-              {messages.map(msg => {
-                const isOwn = msg.senderId === user.id;
-                return (
-                  <div key={msg.id} className={cn("flex", isOwn ? "justify-end" : "justify-start")} data-testid={`message-${msg.id}`}>
-                    <div className={cn("max-w-[70%] p-3 rounded-2xl shadow-sm", isOwn ? "bg-primary text-primary-foreground rounded-br-none" : "bg-white border text-slate-800 rounded-bl-none")}>
-                      {renderFileBubble(msg, isOwn)}
-                      <p className="text-[10px] mt-1 text-right opacity-70">{formatTime(msg.createdAt)}</p>
-                    </div>
-                  </div>
-                );
-              })}
-              {messages.length === 0 && <p className="text-center text-muted-foreground text-sm py-8">Henüz mesaj yok. İlk mesajı gönderin!</p>}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {renderInputBar()}
-          </>
-        ) : activeGroup ? (
-          <>
-            {/* Group chat header */}
-            <div className="p-3 border-b flex items-center justify-between bg-white shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Users className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm">{activeGroup.name}</h3>
-                  <p className="text-xs text-muted-foreground">{activeGroup.memberCount} üye</p>
-                </div>
-              </div>
-              {(activeGroup.createdBy === user.id || user.role === "super_admin") && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50"
-                  onClick={() => handleDeleteGroup(activeGroup.id, activeGroup.name)}
-                  data-testid="button-delete-group"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-
-            {/* Group messages */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/50">
-              {groupMessages.map(msg => {
-                const isOwn = msg.senderId === user.id;
-                const sender = userMap.get(msg.senderId);
-                const senderName = isOwn ? "Siz" : (sender?.fullName || "Bilinmeyen");
-                return (
-                  <div key={msg.id} className={cn("flex", isOwn ? "justify-end" : "justify-start")} data-testid={`group-message-${msg.id}`}>
-                    <div className="max-w-[70%]">
-                      {!isOwn && <p className="text-[10px] text-muted-foreground mb-1 ml-1 font-medium">{senderName}</p>}
-                      <div className={cn("p-3 rounded-2xl shadow-sm", isOwn ? "bg-primary text-primary-foreground rounded-br-none" : "bg-white border text-slate-800 rounded-bl-none")}>
+              <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/50">
+                {messages.map(msg => {
+                  const isOwn = msg.senderId === user.id;
+                  return (
+                    <div key={msg.id} className={cn("flex", isOwn ? "justify-end" : "justify-start")} data-testid={`message-${msg.id}`}>
+                      <div className={cn("max-w-[75%] p-3 rounded-2xl shadow-sm", isOwn ? "bg-primary text-primary-foreground rounded-br-none" : "bg-white border text-slate-800 rounded-bl-none")}>
                         {renderFileBubble(msg, isOwn)}
                         <p className="text-[10px] mt-1 text-right opacity-70">{formatTime(msg.createdAt)}</p>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-              {groupMessages.length === 0 && <p className="text-center text-muted-foreground text-sm py-8">Henüz mesaj yok. İlk mesajı gönderin!</p>}
-              <div ref={messagesEndRef} />
+                  );
+                })}
+                {messages.length === 0 && <p className="text-center text-muted-foreground text-sm py-8">Henüz mesaj yok.</p>}
+                <div ref={messagesEndRef} />
+              </div>
+              {renderInputBar()}
+            </>
+          ) : activeGroup ? (
+            <>
+              <div className="px-3 py-2 bg-white flex items-center gap-2 shrink-0">
+                <button onClick={closeChat} className="p-1 rounded hover:bg-slate-100 text-slate-600" data-testid="button-back-chat">
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Users className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-sm leading-tight">{activeGroup.name}</h3>
+                  <p className="text-xs text-muted-foreground">{activeGroup.memberCount} üye</p>
+                </div>
+                {(activeGroup.createdBy === user.id || user.role === "super_admin") && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteGroup(activeGroup.id, activeGroup.name)} data-testid="button-delete-group">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/50">
+                {groupMessages.map(msg => {
+                  const isOwn = msg.senderId === user.id;
+                  const sender = userMap.get(msg.senderId);
+                  const senderName = isOwn ? "Siz" : (sender?.fullName || "Bilinmeyen");
+                  return (
+                    <div key={msg.id} className={cn("flex", isOwn ? "justify-end" : "justify-start")} data-testid={`group-message-${msg.id}`}>
+                      <div className="max-w-[75%]">
+                        {!isOwn && <p className="text-[10px] text-muted-foreground mb-1 ml-1 font-medium">{senderName}</p>}
+                        <div className={cn("p-3 rounded-2xl shadow-sm", isOwn ? "bg-primary text-primary-foreground rounded-br-none" : "bg-white border text-slate-800 rounded-bl-none")}>
+                          {renderFileBubble(msg, isOwn)}
+                          <p className="text-[10px] mt-1 text-right opacity-70">{formatTime(msg.createdAt)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {groupMessages.length === 0 && <p className="text-center text-muted-foreground text-sm py-8">Henüz mesaj yok.</p>}
+                <div ref={messagesEndRef} />
+              </div>
+              {renderInputBar()}
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
+              <Users className="h-10 w-10 text-slate-300" />
+              <p className="text-sm">Sohbet başlatmak için bir kişi seçin</p>
             </div>
-
-            {renderInputBar()}
-          </>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
-            <Users className="h-10 w-10 text-slate-300" />
-            <p className="text-sm">Sohbet başlatmak için bir kişi veya grup seçin</p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
