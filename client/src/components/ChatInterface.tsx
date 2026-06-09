@@ -605,7 +605,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="relative overflow-hidden flex-1 bg-white" style={{minHeight: 0, paddingTop: "5mm", paddingLeft: "5mm", paddingRight: "5mm"}}>
+    <div className="flex flex-col flex-1 overflow-hidden bg-white" style={{minHeight: 0, paddingTop: "5mm", paddingLeft: "5mm", paddingRight: "5mm"}}>
       <canvas ref={canvasRef} className="hidden" />
       <input
         id="chat-file-input"
@@ -707,11 +707,11 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
       {/* Sliding container: 2 panels side by side, shifts left when chat open */}
       <div
-        className="flex h-full transition-transform duration-300 ease-in-out"
+        className="flex flex-1 min-h-0 transition-transform duration-300 ease-in-out"
         style={{ width: "200%", transform: chatOpen ? "translateX(-50%)" : "translateX(0)" }}
       >
         {/* Panel 1: Contact list */}
-        <div className="h-full flex flex-col bg-white" style={{ width: "50%" }}>
+        <div className="flex flex-col min-h-0 bg-white" style={{ width: "50%", flexShrink: 0 }}>
           {/* Başlık satırı: Son Sohbetler + Yeni Grup */}
           <div className="px-3 pt-2 pb-1 flex items-center justify-between shrink-0">
             <span className="text-sm font-semibold text-slate-700">Son Sohbetler</span>
@@ -803,7 +803,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         </div>
 
         {/* Panel 2: Chat area */}
-        <div className="h-full flex flex-col bg-white" style={{ width: "50%" }}>
+        <div className="flex flex-col min-h-0 bg-white" style={{ width: "50%", flexShrink: 0 }}>
           {activeUser ? (
             <>
               <div className="px-3 py-2 bg-white flex items-center gap-2 shrink-0">
