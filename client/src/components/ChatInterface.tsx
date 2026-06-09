@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Paperclip, File, Search, X, Download, Loader2, Camera, Image, Users, Plus, Trash2, UserPlus, ChevronLeft } from "lucide-react";
+import { Send, Paperclip, File, Search, X, Download, Loader2, Camera, Image, Users, Plus, Trash2, UserPlus, ChevronLeft, PenLine, AlignJustify } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -730,33 +730,32 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         <div className="flex flex-col bg-white overflow-hidden relative" style={{ width: "50%", flexShrink: 0, height: "100%" }}>
 
           {/* Header */}
-          <div className="px-3 pt-3 pb-2 flex items-center justify-between shrink-0">
-            <span className="text-base font-bold text-primary">Mesajlar</span>
-            <button
-              onClick={() => { setSearchVisible(v => !v); if (searchVisible) setSearchTerm(""); }}
-              className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-blue-50 text-primary"
-              data-testid="button-toggle-search"
-            >
-              <Search className="h-4 w-4" />
-            </button>
+          <div className="px-3 pt-3 pb-1 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <AlignJustify className="h-5 w-5 text-slate-500" />
+              <span className="text-base font-bold text-primary">Mesajlar</span>
+            </div>
+            <Search className="h-4 w-4 text-primary" />
           </div>
 
-          {/* Arama çubuğu (toggle) */}
-          {searchVisible && (
-            <div className="px-3 pb-2 shrink-0">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  autoFocus
-                  placeholder="Sohbet, kişi ara..."
-                  className="pl-8 bg-slate-100 h-8 text-sm rounded-full border-0"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  data-testid="input-search"
-                />
-              </div>
+          {/* Arama çubuğu — her zaman görünür */}
+          <div className="px-3 pt-1 pb-2 shrink-0">
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <Input
+                placeholder="Sohbet, kişi ara..."
+                className="pl-9 bg-slate-100 h-9 text-sm rounded-full border-0 focus-visible:ring-1"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                data-testid="input-search"
+              />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm("")} className="absolute right-3 top-2.5">
+                  <X className="h-3.5 w-3.5 text-slate-400" />
+                </button>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Story / Hızlı erişim avatarlar */}
           {!searchTerm && (
@@ -804,7 +803,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-sm text-slate-800 truncate">{chatUser.fullName}</h4>
                     {lastMessageTimesMap[chatUser.id] && (
-                      <span className="text-[10px] text-slate-400 shrink-0 ml-1">{formatShortTime(lastMessageTimesMap[chatUser.id])}</span>
+                      <span className="text-[10px] text-primary shrink-0 ml-1 font-medium">{formatShortTime(lastMessageTimesMap[chatUser.id])}</span>
                     )}
                   </div>
                   <p className="text-xs text-slate-500 truncate mt-0.5">
@@ -846,11 +845,11 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
           {isManager && (
             <button
               onClick={() => setShowCreateGroup(true)}
-              className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-primary text-white shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+              className="absolute bottom-4 right-4 w-12 h-12 rounded-full bg-primary text-white shadow-xl flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
               title="Yeni Grup Oluştur"
               data-testid="button-new-group"
             >
-              <Plus className="h-5 w-5" />
+              <PenLine className="h-5 w-5" />
             </button>
           )}
         </div>
