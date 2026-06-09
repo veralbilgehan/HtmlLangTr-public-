@@ -104,6 +104,29 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
     return () => clearInterval(interval);
   }, []);
 
+  // Tüm kullanıcıların son mesajlarını arka planda yükle
+  useEffect(() => {
+    if (users.length === 0) return;
+    const prefetch = async () => {
+      for (const u of users) {
+        try {
+          const res = await fetch(`/api/messages/${u.id}`, { credentials: "include" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.messages && data.messages.length > 0) {
+              const last = data.messages[data.messages.length - 1];
+              setLastMessagesMap(prev => ({
+                ...prev,
+                [u.id]: last.content || (last.fileName ? "📎 " + last.fileName : "")
+              }));
+            }
+          }
+        } catch {}
+      }
+    };
+    prefetch();
+  }, [users]);
+
   useEffect(() => {
     if (activeUser) {
       const isNew = activeUser.id !== activeUserIdRef.current;
@@ -451,22 +474,26 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
   const isImageFile = (type: string | null) => type?.startsWith("image/");
 
-  const filteredUsers = users.filter(u =>
-    u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.department?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Slide panel state
+  const [chatOpen, setChatOpen] = useState(false);
+
+  // Last messages map
+  const [lastMessagesMap, setLastMessagesMap] = useState<Record<string, string>>({});
+
+  const filteredUsers = users.filter(u => {
+    const matchesSearch =
+      u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.department?.toLowerCase().includes(searchTerm.toLowerCase());
+    if (searchTerm) return matchesSearch;
+    // Arama yoksa: sadece yazışma geçmişi olanlar
+    return !!lastMessagesMap[u.id];
+  });
 
   const filteredGroups = groups.filter(g =>
     g.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const isManager = user.role === "manager" || user.role === "super_admin";
-
-  // Slide panel state
-  const [chatOpen, setChatOpen] = useState(false);
-
-  // Last messages map
-  const [lastMessagesMap, setLastMessagesMap] = useState<Record<string, string>>({});
 
   // User lookup map for group messages
   const userMap = new Map<string, ChatUser>(users.map(u => [u.id, u]));
@@ -765,7 +792,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
             {filteredUsers.length === 0 && filteredGroups.length === 0 && (
               <p className="text-center text-muted-foreground text-sm py-8">
-                {searchTerm ? "Sonuç bulunamadı" : "Kullanıcı bulunamadı"}
+                {searchTerm ? "Sonuç bulunamadı" : "Henüz yazışma yok. Kişi aramak için yukarıdaki arama kutusunu kullanın."}
               </p>
             )}
           </div>
