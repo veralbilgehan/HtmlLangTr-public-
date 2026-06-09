@@ -117,8 +117,7 @@
     @apply border-border;
   }
   body {
-    @apply font-sans antialiased text-foreground;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    @apply font-sans antialiased text-foreground bg-background;
     min-height: 100vh;
   }
 }
