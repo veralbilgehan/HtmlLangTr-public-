@@ -72,14 +72,6 @@ export default function Dashboard() {
         <header className="bg-primary text-primary-foreground px-3 md:px-6 py-3 md:py-4 flex items-center justify-between gap-3">
           {/* Sol: Şirket adı + Kullanıcı yan yana */}
           <div className="flex items-center gap-3 md:gap-5 min-w-0">
-            {/* Şirket adı */}
-            <div className="min-w-0">
-              <h1 className="text-sm md:text-xl font-bold leading-tight truncate" data-testid="text-company-name">
-                {company?.name || (isSuperAdmin ? "Sistem Yönetimi" : "Şirket Portalı")}
-              </h1>
-            </div>
-            {/* Ayırıcı */}
-            <div className="w-px h-8 bg-white/30 shrink-0 hidden sm:block" />
             {/* Kullanıcı bilgisi */}
             <div className="flex items-center gap-2 min-w-0">
               <Avatar className="h-7 w-7 md:h-9 md:w-9 border-2 border-white/30 shrink-0">
