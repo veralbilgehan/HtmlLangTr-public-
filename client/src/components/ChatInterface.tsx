@@ -123,6 +123,8 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                 ...prev,
                 [u.id]: last.createdAt
               }));
+              const unread = data.messages.filter((m: any) => !m.read && m.senderId !== user.id).length;
+              if (unread > 0) setUnreadCountMap(prev => ({ ...prev, [u.id]: unread }));
             }
           }
         } catch {}
@@ -495,6 +497,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   // Last messages map
   const [lastMessagesMap, setLastMessagesMap] = useState<Record<string, string>>({});
   const [lastMessageTimesMap, setLastMessageTimesMap] = useState<Record<string, string>>({});
+  const [unreadCountMap, setUnreadCountMap] = useState<Record<string, number>>({});
 
   const filteredUsers = users.filter(u => {
     const matchesSearch =
@@ -602,8 +605,14 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   const openChat = (chatUser: ChatUser | null, group: ChatGroup | null) => {
-    if (chatUser) { setActiveUser(chatUser); setActiveGroup(null); }
-    else if (group) { setActiveGroup(group); setActiveUser(null); }
+    if (chatUser) {
+      setActiveUser(chatUser);
+      setActiveGroup(null);
+      setUnreadCountMap(prev => { const n = { ...prev }; delete n[chatUser.id]; return n; });
+    } else if (group) {
+      setActiveGroup(group);
+      setActiveUser(null);
+    }
     setChatOpen(true);
   };
 
@@ -800,15 +809,26 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                 </div>
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-sm text-slate-800 truncate">{chatUser.fullName}</h4>
-                    {lastMessageTimesMap[chatUser.id] && (
-                      <span className="text-[10px] text-primary shrink-0 ml-1 font-medium">{formatShortTime(lastMessageTimesMap[chatUser.id])}</span>
-                    )}
+                  <div className="flex items-center justify-between gap-1">
+                    <h4 className={cn("font-semibold text-sm truncate", unreadCountMap[chatUser.id] ? "text-slate-900" : "text-slate-700")}>{chatUser.fullName}</h4>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {lastMessageTimesMap[chatUser.id] && (
+                        <span className={cn("text-[10px] font-medium", unreadCountMap[chatUser.id] ? "text-primary" : "text-slate-400")}>
+                          {formatShortTime(lastMessageTimesMap[chatUser.id])}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-500 truncate mt-0.5">
-                    {lastMessagesMap[chatUser.id] || chatUser.department || getRoleLabel(chatUser.role)}
-                  </p>
+                  <div className="flex items-center justify-between gap-1 mt-0.5">
+                    <p className={cn("text-xs truncate", unreadCountMap[chatUser.id] ? "text-slate-700 font-medium" : "text-slate-400")}>
+                      {lastMessagesMap[chatUser.id] || chatUser.department || getRoleLabel(chatUser.role)}
+                    </p>
+                    {unreadCountMap[chatUser.id] ? (
+                      <span className="shrink-0 min-w-[18px] h-[18px] bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                        {unreadCountMap[chatUser.id]}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             ))}
