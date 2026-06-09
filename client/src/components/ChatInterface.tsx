@@ -712,9 +712,23 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
       >
         {/* Panel 1: Contact list */}
         <div className="h-full flex flex-col bg-white" style={{ width: "50%" }}>
-          {/* Search + Yeni Grup */}
-          <div className="p-2 bg-white flex items-center gap-1 shrink-0">
-            <div className="relative flex-1">
+          {/* Başlık satırı: Son Sohbetler + Yeni Grup */}
+          <div className="px-3 pt-2 pb-1 flex items-center justify-between shrink-0">
+            <span className="text-sm font-semibold text-slate-700">Son Sohbetler</span>
+            {isManager && (
+              <button
+                onClick={() => setShowCreateGroup(true)}
+                className="h-7 w-7 flex items-center justify-center rounded-md text-primary hover:bg-blue-50 border border-slate-200 bg-white shrink-0"
+                title="Yeni Grup Oluştur"
+                data-testid="button-new-group"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          {/* Arama çubuğu */}
+          <div className="px-2 pb-2 shrink-0">
+            <div className="relative">
               <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 placeholder="Kişi veya grup ara..."
@@ -724,16 +738,6 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                 data-testid="input-search"
               />
             </div>
-            {isManager && (
-              <button
-                onClick={() => setShowCreateGroup(true)}
-                className="h-8 w-8 flex items-center justify-center rounded-md text-primary hover:bg-blue-50 border border-slate-200 bg-white shrink-0"
-                title="Yeni Grup Oluştur"
-                data-testid="button-new-group"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            )}
           </div>
 
           {/* List */}
