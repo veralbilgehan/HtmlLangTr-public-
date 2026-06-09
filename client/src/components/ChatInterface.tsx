@@ -578,7 +578,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="relative overflow-hidden flex-1 bg-white" style={{minHeight: 0}}>
+    <div className="relative overflow-hidden flex-1 bg-white" style={{minHeight: 0, paddingTop: "5mm", paddingLeft: "5mm", paddingRight: "5mm"}}>
       <canvas ref={canvasRef} className="hidden" />
       <input
         id="chat-file-input"
@@ -680,7 +680,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
       {/* Sliding container: 2 panels side by side, shifts left when chat open */}
       <div
-        className="absolute inset-0 flex transition-transform duration-300 ease-in-out"
+        className="flex h-full transition-transform duration-300 ease-in-out"
         style={{ width: "200%", transform: chatOpen ? "translateX(-50%)" : "translateX(0)" }}
       >
         {/* Panel 1: Contact list */}
