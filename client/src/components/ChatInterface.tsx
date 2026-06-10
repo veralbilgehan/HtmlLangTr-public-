@@ -1000,89 +1000,161 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         </div>
 
         {/* Panel 2: Chat area */}
-        <div className="flex flex-col bg-white overflow-hidden" style={{ width: "50%", flexShrink: 0, height: "100%" }}>
+        <div className="flex flex-col overflow-hidden" style={{ width: "50%", flexShrink: 0, height: "100%", background: "#f5f7fa" }}>
           {activeUser ? (
             <>
-              <div className="px-3 py-2 bg-white flex items-center gap-2 shrink-0">
-                <button onClick={closeChat} className="p-1 rounded hover:bg-slate-100 text-slate-600" data-testid="button-back-chat">
+              {/* Header */}
+              <div className="px-3 py-2.5 bg-white flex items-center gap-2.5 shrink-0 border-b border-slate-100 shadow-sm">
+                <button onClick={closeChat} className="p-1 rounded-full hover:bg-slate-100 text-slate-500" data-testid="button-back-chat">
                   <ChevronLeft className="h-5 w-5" />
                 </button>
-                {activeUser.avatar ? (
-                  <img src={activeUser.avatar} alt={activeUser.fullName} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
-                    {getInitials(activeUser.fullName)}
-                  </div>
-                )}
+                <div className="relative shrink-0">
+                  {activeUser.avatar ? (
+                    <img src={activeUser.avatar} alt={activeUser.fullName} className="w-9 h-9 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                      {getInitials(activeUser.fullName)}
+                    </div>
+                  )}
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
+                </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-sm leading-tight">{activeUser.fullName}</h3>
-                  <p className="text-xs text-green-600 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-600 inline-block" /> Çevrimiçi
-                  </p>
+                  <h3 className="font-bold text-sm leading-tight text-slate-900">{activeUser.fullName}</h3>
+                  <p className="text-[11px] text-green-600 font-medium">Çevrimiçi</p>
                 </div>
               </div>
-              <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/50">
-                {messages.map(msg => {
+
+              {/* Messages */}
+              <div className="flex-1 px-3 py-3 overflow-y-auto space-y-2">
+                {messages.map((msg, i) => {
                   const isOwn = msg.senderId === user.id;
+                  const prevMsg = messages[i - 1];
+                  const showDate = !prevMsg || new Date(msg.createdAt).toDateString() !== new Date(prevMsg.createdAt).toDateString();
                   return (
-                    <div key={msg.id} className={cn("flex", isOwn ? "justify-end" : "justify-start")} data-testid={`message-${msg.id}`}>
-                      <div className={cn("max-w-[75%] p-3 rounded-2xl shadow-sm", isOwn ? "bg-primary text-primary-foreground rounded-br-none" : "bg-white border text-slate-800 rounded-bl-none")}>
-                        {renderFileBubble(msg, isOwn)}
-                        <p className="text-[10px] mt-1 text-right opacity-70">{formatTime(msg.createdAt)}</p>
+                    <div key={msg.id} data-testid={`message-${msg.id}`}>
+                      {showDate && (
+                        <div className="flex items-center gap-2 my-3">
+                          <div className="flex-1 h-px bg-slate-200" />
+                          <span className="text-[10px] text-slate-400 font-medium px-2">
+                            {new Date(msg.createdAt).toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}
+                          </span>
+                          <div className="flex-1 h-px bg-slate-200" />
+                        </div>
+                      )}
+                      <div className={cn("flex items-end gap-1.5", isOwn ? "justify-end" : "justify-start")}>
+                        {!isOwn && (
+                          activeUser.avatar
+                            ? <img src={activeUser.avatar} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 mb-0.5" />
+                            : <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mb-0.5 text-[9px] font-bold text-primary">{getInitials(activeUser.fullName)}</div>
+                        )}
+                        <div className={cn(
+                          "max-w-[72%] px-3 py-2 rounded-2xl shadow-sm text-sm",
+                          isOwn
+                            ? "bg-primary text-white rounded-br-sm"
+                            : "bg-white text-slate-800 rounded-bl-sm border border-slate-100"
+                        )}>
+                          {renderFileBubble(msg, isOwn)}
+                          <p className={cn("text-[10px] mt-1 text-right", isOwn ? "text-white/60" : "text-slate-400")}>
+                            {formatTime(msg.createdAt)}
+                            {isOwn && <span className="ml-1">{msg.read ? "✓✓" : "✓"}</span>}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   );
                 })}
-                {messages.length === 0 && <p className="text-center text-muted-foreground text-sm py-8">Henüz mesaj yok.</p>}
+                {messages.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400 pt-16">
+                    <MessageSquare className="h-10 w-10 text-slate-200" />
+                    <p className="text-sm">{activeUser.fullName} ile sohbet başlat</p>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
               {renderInputBar()}
             </>
           ) : activeGroup ? (
             <>
-              <div className="px-3 py-2 bg-white flex items-center gap-2 shrink-0">
-                <button onClick={closeChat} className="p-1 rounded hover:bg-slate-100 text-slate-600" data-testid="button-back-chat">
+              {/* Group Header */}
+              <div className="px-3 py-2.5 bg-white flex items-center gap-2.5 shrink-0 border-b border-slate-100 shadow-sm">
+                <button onClick={closeChat} className="p-1 rounded-full hover:bg-slate-100 text-slate-500" data-testid="button-back-chat">
                   <ChevronLeft className="h-5 w-5" />
                 </button>
-                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Users className="h-3.5 w-3.5 text-primary" />
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Users className="h-4 w-4 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-sm leading-tight">{activeGroup.name}</h3>
-                  <p className="text-xs text-muted-foreground">{activeGroup.memberCount} üye</p>
+                  <h3 className="font-bold text-sm leading-tight text-slate-900">{activeGroup.name}</h3>
+                  <p className="text-[11px] text-slate-400">{activeGroup.memberCount} üye</p>
                 </div>
                 {(activeGroup.createdBy === user.id || user.role === "super_admin") && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteGroup(activeGroup.id, activeGroup.name)} data-testid="button-delete-group">
+                  <button className="p-1.5 rounded-full hover:bg-red-50 text-red-400" onClick={() => handleDeleteGroup(activeGroup.id, activeGroup.name)} data-testid="button-delete-group">
                     <Trash2 className="h-4 w-4" />
-                  </Button>
+                  </button>
                 )}
               </div>
-              <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/50">
-                {groupMessages.map(msg => {
+
+              {/* Group Messages */}
+              <div className="flex-1 px-3 py-3 overflow-y-auto space-y-2">
+                {groupMessages.map((msg, i) => {
                   const isOwn = msg.senderId === user.id;
                   const sender = userMap.get(msg.senderId);
-                  const senderName = isOwn ? "Siz" : (sender?.fullName || "Bilinmeyen");
+                  const prevMsg = groupMessages[i - 1];
+                  const showDate = !prevMsg || new Date(msg.createdAt).toDateString() !== new Date(prevMsg.createdAt).toDateString();
+                  const showSender = !isOwn && (!prevMsg || prevMsg.senderId !== msg.senderId);
                   return (
-                    <div key={msg.id} className={cn("flex", isOwn ? "justify-end" : "justify-start")} data-testid={`group-message-${msg.id}`}>
-                      <div className="max-w-[75%]">
-                        {!isOwn && <p className="text-[10px] text-muted-foreground mb-1 ml-1 font-medium">{senderName}</p>}
-                        <div className={cn("p-3 rounded-2xl shadow-sm", isOwn ? "bg-primary text-primary-foreground rounded-br-none" : "bg-white border text-slate-800 rounded-bl-none")}>
-                          {renderFileBubble(msg, isOwn)}
-                          <p className="text-[10px] mt-1 text-right opacity-70">{formatTime(msg.createdAt)}</p>
+                    <div key={msg.id} data-testid={`group-message-${msg.id}`}>
+                      {showDate && (
+                        <div className="flex items-center gap-2 my-3">
+                          <div className="flex-1 h-px bg-slate-200" />
+                          <span className="text-[10px] text-slate-400 font-medium px-2">
+                            {new Date(msg.createdAt).toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}
+                          </span>
+                          <div className="flex-1 h-px bg-slate-200" />
+                        </div>
+                      )}
+                      <div className={cn("flex items-end gap-1.5", isOwn ? "justify-end" : "justify-start")}>
+                        {!isOwn && (
+                          sender?.avatar
+                            ? <img src={sender.avatar} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 mb-0.5" />
+                            : <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mb-0.5 text-[9px] font-bold text-primary">{getInitials(sender?.fullName || "?")}</div>
+                        )}
+                        <div className="max-w-[72%]">
+                          {showSender && !isOwn && (
+                            <p className="text-[10px] text-primary font-semibold mb-1 ml-1">{sender?.fullName || "Bilinmeyen"}</p>
+                          )}
+                          <div className={cn(
+                            "px-3 py-2 rounded-2xl shadow-sm text-sm",
+                            isOwn
+                              ? "bg-primary text-white rounded-br-sm"
+                              : "bg-white text-slate-800 rounded-bl-sm border border-slate-100"
+                          )}>
+                            {renderFileBubble(msg, isOwn)}
+                            <p className={cn("text-[10px] mt-1 text-right", isOwn ? "text-white/60" : "text-slate-400")}>
+                              {formatTime(msg.createdAt)}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
                   );
                 })}
-                {groupMessages.length === 0 && <p className="text-center text-muted-foreground text-sm py-8">Henüz mesaj yok.</p>}
+                {groupMessages.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400 pt-16">
+                    <Users className="h-10 w-10 text-slate-200" />
+                    <p className="text-sm">{activeGroup.name} grubuna ilk mesajı gönder</p>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
               {renderInputBar()}
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
-              <Users className="h-10 w-10 text-slate-300" />
-              <p className="text-sm">Sohbet başlatmak için bir kişi seçin</p>
+            <div className="flex-1 flex flex-col items-center justify-center gap-3">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <MessageSquare className="h-8 w-8 text-primary/40" />
+              </div>
+              <p className="text-sm text-slate-400 text-center px-4">Sohbet başlatmak için<br/>bir kişi veya grup seçin</p>
             </div>
           )}
         </div>
