@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Paperclip, File, Search, X, Download, Loader2, Camera, Image, Users, Plus, Trash2, UserPlus, ChevronLeft, PenLine, AlignJustify, MessageSquare, Settings } from "lucide-react";
+import { Send, Paperclip, File, Search, X, Download, Loader2, Camera, Image, Users, Plus, Trash2, UserPlus, ChevronLeft, PenLine, AlignJustify, MessageSquare, Settings, Phone, Video, Mic, MicOff } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -87,6 +87,9 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   const [showCamera, setShowCamera] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -552,8 +555,23 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
   // ─── Message input bar (shared) ───────────────────────────────────────────
 
+  const toggleRecording = () => {
+    if (isRecording) {
+      setIsRecording(false);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      setRecordingSeconds(0);
+      toast({ title: "Sesli mesaj", description: "Sesli mesaj gönderme yakında aktif olacak." });
+    } else {
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
+    }
+  };
+
+  const formatRecordingTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+
   const renderInputBar = () => (
-    <div className="p-2 bg-white shrink-0">
+    <div className="px-3 py-2 bg-white border-t border-slate-100 shrink-0">
       {selectedFile && (
         <div className="mb-2 px-2 py-2 bg-blue-50 rounded-lg flex items-center gap-2">
           {selectedFile.type.startsWith("image/") ? (
@@ -568,36 +586,58 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
           </Button>
         </div>
       )}
-      <div className="flex items-center gap-1">
-        <label
-          htmlFor="chat-file-input"
-          className={`inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground shrink-0 cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors ${isSending ? "opacity-50 pointer-events-none" : ""}`}
-          data-testid="button-attach-file"
-        >
-          <Paperclip className="h-4 w-4" />
-        </label>
-        <Button variant="ghost" size="icon" className="text-muted-foreground shrink-0 h-8 w-8" onClick={startCamera} disabled={isSending} data-testid="button-open-camera">
-          <Camera className="h-4 w-4" />
-        </Button>
-        <Input
-          value={messageInput}
-          onChange={e => setMessageInput(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
-          placeholder="Mesaj yazın..."
-          className="flex-1 min-w-0 rounded-full bg-slate-50 border-slate-200 text-sm h-8"
-          disabled={isSending}
-          data-testid="input-message"
-        />
-        <Button
-          onClick={handleSend}
-          size="icon"
-          className="rounded-full h-8 w-8 shrink-0 bg-primary"
-          disabled={isSending || (!messageInput.trim() && !selectedFile)}
-          data-testid="button-send-message"
-        >
-          {isSending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-        </Button>
-      </div>
+      {isRecording ? (
+        <div className="flex items-center gap-2 py-1">
+          <button onClick={toggleRecording} className="w-8 h-8 flex items-center justify-center rounded-full bg-red-100 text-red-500" data-testid="button-stop-recording">
+            <MicOff className="h-4 w-4" />
+          </button>
+          <div className="flex-1 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-sm font-medium text-red-500">{formatRecordingTime(recordingSeconds)}</span>
+            <span className="text-xs text-slate-400">Kayıt yapılıyor...</span>
+          </div>
+          <Button onClick={toggleRecording} size="sm" className="rounded-full bg-red-500 hover:bg-red-600 h-8 px-3 text-xs" data-testid="button-send-recording">
+            <Send className="h-3 w-3 mr-1" /> Gönder
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1.5">
+          <label
+            htmlFor="chat-file-input"
+            className={`inline-flex items-center justify-center h-8 w-8 rounded-full text-slate-400 shrink-0 cursor-pointer hover:bg-slate-100 transition-colors ${isSending ? "opacity-50 pointer-events-none" : ""}`}
+            data-testid="button-attach-file"
+          >
+            <Paperclip className="h-4 w-4" />
+          </label>
+          <button onClick={startCamera} disabled={isSending} className="h-8 w-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 transition-colors shrink-0" data-testid="button-open-camera">
+            <Camera className="h-4 w-4" />
+          </button>
+          <Input
+            value={messageInput}
+            onChange={e => setMessageInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
+            placeholder="Mesaj yazın..."
+            className="flex-1 min-w-0 rounded-full bg-slate-50 border-slate-200 text-sm h-9"
+            disabled={isSending}
+            data-testid="input-message"
+          />
+          {messageInput.trim() || selectedFile ? (
+            <Button
+              onClick={handleSend}
+              size="icon"
+              className="rounded-full h-9 w-9 shrink-0 bg-primary"
+              disabled={isSending}
+              data-testid="button-send-message"
+            >
+              {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            </Button>
+          ) : (
+            <button onClick={toggleRecording} className="h-9 w-9 flex items-center justify-center rounded-full bg-primary text-white shrink-0 hover:bg-primary/90 transition-colors" data-testid="button-record-voice">
+              <Mic className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
       {isUploading && <p className="text-xs text-muted-foreground text-center mt-1">Dosya yükleniyor...</p>}
     </div>
   );
@@ -882,38 +922,62 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
             </>)}
 
             {/* ── Kişiler tab — tüm kullanıcılar ── */}
-            {activeTab === "kisiler" && (<>
-              {users.filter(u => u.id !== user.id && (
+            {activeTab === "kisiler" && (() => {
+              const filtered = users.filter(u => u.id !== user.id && (
                 !searchTerm ||
                 u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 u.department?.toLowerCase().includes(searchTerm.toLowerCase())
-              )).map(u => (
-                <div
-                  key={u.id}
-                  onClick={() => { openChat(u, null); setActiveTab("sohbetler"); }}
-                  className="flex items-center gap-3 py-3 px-3 cursor-pointer hover:bg-slate-50 active:bg-blue-50 transition-colors border-b border-slate-100"
-                  data-testid={`contact-${u.id}`}
-                >
-                  <div className="relative shrink-0">
-                    {u.avatar ? (
-                      <img src={u.avatar} alt={u.fullName} className="w-12 h-12 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                        {getInitials(u.fullName)}
-                      </div>
-                    )}
-                    <span className="absolute bottom-0.5 right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm text-slate-800 truncate">{u.fullName}</h4>
-                    <p className="text-xs text-slate-400 truncate mt-0.5">{u.department || getRoleLabel(u.role)}</p>
-                  </div>
-                </div>
-              ))}
-              {users.filter(u => u.id !== user.id).length === 0 && (
+              )).sort((a, b) => a.fullName.localeCompare(b.fullName, "tr"));
+
+              if (filtered.length === 0) return (
                 <p className="text-center text-muted-foreground text-sm py-8">Kişi bulunamadı</p>
-              )}
-            </>)}
+              );
+
+              const grouped: Record<string, typeof filtered> = {};
+              filtered.forEach(u => {
+                const letter = u.fullName[0].toLocaleUpperCase("tr");
+                if (!grouped[letter]) grouped[letter] = [];
+                grouped[letter].push(u);
+              });
+
+              return Object.keys(grouped).sort((a, b) => a.localeCompare(b, "tr")).map(letter => (
+                <div key={letter}>
+                  <div className="px-3 py-1 bg-slate-50 border-b border-slate-100">
+                    <span className="text-[11px] font-bold text-primary uppercase tracking-wider">{letter}</span>
+                  </div>
+                  {grouped[letter].map(u => (
+                    <div
+                      key={u.id}
+                      onClick={() => { openChat(u, null); setActiveTab("sohbetler"); }}
+                      className="flex items-center gap-3 py-2.5 px-3 cursor-pointer hover:bg-slate-50 active:bg-blue-50 transition-colors border-b border-slate-100"
+                      data-testid={`contact-${u.id}`}
+                    >
+                      <div className="relative shrink-0">
+                        {u.avatar ? (
+                          <img src={u.avatar} alt={u.fullName} className="w-11 h-11 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                            {getInitials(u.fullName)}
+                          </div>
+                        )}
+                        <span className="absolute bottom-0.5 right-0.5 w-2 h-2 bg-green-500 rounded-full border-2 border-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm text-slate-800 truncate">{u.fullName}</h4>
+                        <p className="text-xs text-slate-400 truncate mt-0.5">{u.department || getRoleLabel(u.role)}</p>
+                      </div>
+                      <button
+                        onClick={e => { e.stopPropagation(); toast({ title: "Sesli Arama", description: `${u.fullName} aranıyor...` }); }}
+                        className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-primary transition-colors shrink-0"
+                        data-testid={`call-contact-${u.id}`}
+                      >
+                        <Phone className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ));
+            })()}
 
             {/* ── Ayarlar tab ── */}
             {activeTab === "ayarlar" && (
@@ -1041,6 +1105,21 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                   <h3 className="font-bold text-sm leading-tight text-slate-900">{activeUser.fullName}</h3>
                   <p className="text-[11px] text-green-600 font-medium">Çevrimiçi</p>
                 </div>
+                {/* Çağrı butonları */}
+                <button
+                  onClick={() => toast({ title: "Sesli Arama", description: "Sesli arama özelliği yakında aktif olacak." })}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition-colors shrink-0"
+                  data-testid="button-voice-call"
+                >
+                  <Phone className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => toast({ title: "Görüntülü Arama", description: "Görüntülü arama özelliği yakında aktif olacak." })}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition-colors shrink-0"
+                  data-testid="button-video-call"
+                >
+                  <Video className="h-4 w-4" />
+                </button>
               </div>
 
               {/* Messages */}
