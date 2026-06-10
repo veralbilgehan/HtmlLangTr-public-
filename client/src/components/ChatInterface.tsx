@@ -502,14 +502,21 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
   const [lastMessageTimesMap, setLastMessageTimesMap] = useState<Record<string, string>>({});
   const [unreadCountMap, setUnreadCountMap] = useState<Record<string, number>>({});
 
-  const filteredUsers = users.filter(u => {
-    const matchesSearch =
-      u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.department?.toLowerCase().includes(searchTerm.toLowerCase());
-    if (searchTerm) return matchesSearch;
-    // Arama yoksa: sadece yazışma geçmişi olanlar
-    return !!lastMessagesMap[u.id];
-  });
+  const filteredUsers = users
+    .filter(u => {
+      if (u.id === user.id) return false;
+      if (!searchTerm) return true;
+      return (
+        u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.department?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    })
+    .sort((a, b) => {
+      // Mesajlaşılanlar üstte (son mesaj zamanına göre), diğerleri alta
+      const aTime = lastMessageTimesMap[a.id] ? new Date(lastMessageTimesMap[a.id]).getTime() : 0;
+      const bTime = lastMessageTimesMap[b.id] ? new Date(lastMessageTimesMap[b.id]).getTime() : 0;
+      return bTime - aTime;
+    });
 
   const filteredGroups = groups.filter(g =>
     g.name.toLowerCase().includes(searchTerm.toLowerCase())
