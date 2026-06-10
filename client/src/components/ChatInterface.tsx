@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Paperclip, File, Search, X, Download, Loader2, Camera, Image, Users, Plus, Trash2, UserPlus, ChevronLeft, PenLine, AlignJustify } from "lucide-react";
+import { Send, Paperclip, File, Search, X, Download, Loader2, Camera, Image, Users, Plus, Trash2, UserPlus, ChevronLeft, PenLine, AlignJustify, MessageSquare, Settings } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -56,13 +56,13 @@ interface ChatInterfaceProps {
   user: User;
 }
 
-type TabType = "kisiler" | "gruplar";
+type TabType = "sohbetler" | "kisiler" | "ayarlar";
 
 export default function ChatInterface({ user }: ChatInterfaceProps) {
   const { toast } = useToast();
 
   // Tab
-  const [activeTab, setActiveTab] = useState<TabType>("kisiler");
+  const [activeTab, setActiveTab] = useState<TabType>("sohbetler");
 
   // Direct chat state
   const [users, setUsers] = useState<ChatUser[]>([]);
@@ -766,11 +766,11 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
             </div>
           </div>
 
-          {/* Story / Hızlı erişim avatarlar */}
-          {!searchTerm && (
+          {/* Story / Hızlı erişim avatarlar — sadece Sohbetler tabında ve arama yokken */}
+          {activeTab === "sohbetler" && !searchTerm && (
             <div className="px-3 pb-2 shrink-0">
               <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
-                {users.slice(0, 8).map(u => (
+                {users.slice(0, 8).map((u, idx) => (
                   <button
                     key={u.id}
                     onClick={() => openChat(u, null)}
@@ -778,100 +778,225 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                     data-testid={`story-${u.id}`}
                   >
                     <div className="relative">
-                      <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm ring-2 ring-primary/20">
-                        {getInitials(u.fullName)}
-                      </div>
-                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
+                      {u.avatar ? (
+                        <img
+                          src={u.avatar}
+                          alt={u.fullName}
+                          className={cn(
+                            "w-12 h-12 rounded-full object-cover",
+                            idx === 0 ? "ring-2 ring-primary ring-offset-1" : "ring-1 ring-slate-200"
+                          )}
+                        />
+                      ) : (
+                        <div className={cn(
+                          "w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm",
+                          idx === 0 ? "ring-2 ring-primary ring-offset-1" : "ring-1 ring-slate-200"
+                        )}>
+                          {getInitials(u.fullName)}
+                        </div>
+                      )}
+                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
                     </div>
-                    <span className="text-[10px] text-slate-600 max-w-[44px] truncate text-center">{u.fullName.split(" ")[0]}</span>
+                    <span className="text-[10px] text-slate-600 max-w-[48px] truncate text-center">{u.fullName.split(" ")[0]}</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Conversation list */}
+          {/* Content area — tab'a göre değişir */}
           <div className="flex-1 overflow-y-auto">
-            {/* Kişiler */}
-            {filteredUsers.map(chatUser => (
-              <div
-                key={chatUser.id}
-                onClick={() => openChat(chatUser, null)}
-                className="flex items-center gap-3 py-2.5 px-3 cursor-pointer hover:bg-slate-50 active:bg-blue-50 transition-colors"
-                data-testid={`user-${chatUser.id}`}
-              >
-                {/* Avatar */}
-                <div className="relative shrink-0">
-                  <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                    {getInitials(chatUser.fullName)}
+
+            {/* ── Sohbetler tab ── */}
+            {activeTab === "sohbetler" && (<>
+              {filteredUsers.map(chatUser => (
+                <div
+                  key={chatUser.id}
+                  onClick={() => openChat(chatUser, null)}
+                  className="flex items-center gap-3 py-3 px-3 cursor-pointer hover:bg-slate-50 active:bg-blue-50 transition-colors border-b border-slate-100"
+                  data-testid={`user-${chatUser.id}`}
+                >
+                  <div className="relative shrink-0">
+                    {chatUser.avatar ? (
+                      <img src={chatUser.avatar} alt={chatUser.fullName} className="w-12 h-12 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                        {getInitials(chatUser.fullName)}
+                      </div>
+                    )}
+                    <span className="absolute bottom-0.5 right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
                   </div>
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
-                </div>
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1">
-                    <h4 className={cn("font-semibold text-sm truncate", unreadCountMap[chatUser.id] ? "text-slate-900" : "text-slate-700")}>{chatUser.fullName}</h4>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <h4 className={cn("font-semibold text-sm truncate", unreadCountMap[chatUser.id] ? "text-slate-900" : "text-slate-700")}>{chatUser.fullName}</h4>
                       {lastMessageTimesMap[chatUser.id] && (
-                        <span className={cn("text-[10px] font-medium", unreadCountMap[chatUser.id] ? "text-primary" : "text-slate-400")}>
+                        <span className={cn("text-[10px] font-medium shrink-0", unreadCountMap[chatUser.id] ? "text-primary" : "text-slate-400")}>
                           {formatShortTime(lastMessageTimesMap[chatUser.id])}
                         </span>
                       )}
                     </div>
+                    <div className="flex items-center justify-between gap-1 mt-0.5">
+                      <p className={cn("text-xs truncate", unreadCountMap[chatUser.id] ? "text-slate-700 font-medium" : "text-slate-400")}>
+                        {lastMessagesMap[chatUser.id] || chatUser.department || getRoleLabel(chatUser.role)}
+                      </p>
+                      {unreadCountMap[chatUser.id] ? (
+                        <span className="shrink-0 min-w-[18px] h-[18px] bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                          {unreadCountMap[chatUser.id]}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between gap-1 mt-0.5">
-                    <p className={cn("text-xs truncate", unreadCountMap[chatUser.id] ? "text-slate-700 font-medium" : "text-slate-400")}>
-                      {lastMessagesMap[chatUser.id] || chatUser.department || getRoleLabel(chatUser.role)}
-                    </p>
-                    {unreadCountMap[chatUser.id] ? (
-                      <span className="shrink-0 min-w-[18px] h-[18px] bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-                        {unreadCountMap[chatUser.id]}
-                      </span>
-                    ) : null}
+                </div>
+              ))}
+
+              {filteredGroups.map(group => (
+                <div
+                  key={group.id}
+                  onClick={() => openChat(null, group)}
+                  className="flex items-center gap-3 py-3 px-3 cursor-pointer hover:bg-slate-50 active:bg-blue-50 transition-colors border-b border-slate-100"
+                  data-testid={`group-${group.id}`}
+                >
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-sm text-slate-800 truncate">{group.name}</h4>
+                      <span className="text-[10px] text-slate-400 shrink-0 ml-1">{group.memberCount} üye</span>
+                    </div>
+                    <p className="text-xs text-slate-400 truncate mt-0.5">Grup sohbeti</p>
+                  </div>
+                </div>
+              ))}
+
+              {filteredUsers.length === 0 && filteredGroups.length === 0 && (
+                <p className="text-center text-muted-foreground text-sm py-8 px-4">
+                  {searchTerm ? "Sonuç bulunamadı" : "Henüz yazışma yok."}
+                </p>
+              )}
+            </>)}
+
+            {/* ── Kişiler tab — tüm kullanıcılar ── */}
+            {activeTab === "kisiler" && (<>
+              {users.filter(u => u.id !== user.id).map(u => (
+                <div
+                  key={u.id}
+                  onClick={() => { openChat(u, null); setActiveTab("sohbetler"); }}
+                  className="flex items-center gap-3 py-3 px-3 cursor-pointer hover:bg-slate-50 active:bg-blue-50 transition-colors border-b border-slate-100"
+                  data-testid={`contact-${u.id}`}
+                >
+                  <div className="relative shrink-0">
+                    {u.avatar ? (
+                      <img src={u.avatar} alt={u.fullName} className="w-12 h-12 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                        {getInitials(u.fullName)}
+                      </div>
+                    )}
+                    <span className="absolute bottom-0.5 right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-sm text-slate-800 truncate">{u.fullName}</h4>
+                    <p className="text-xs text-slate-400 truncate mt-0.5">{u.department || getRoleLabel(u.role)}</p>
+                  </div>
+                </div>
+              ))}
+              {users.filter(u => u.id !== user.id).length === 0 && (
+                <p className="text-center text-muted-foreground text-sm py-8">Kişi bulunamadı</p>
+              )}
+            </>)}
+
+            {/* ── Ayarlar tab ── */}
+            {activeTab === "ayarlar" && (
+              <div className="p-4 space-y-3">
+                <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold mb-2">Sohbet Ayarları</p>
+                {isManager && (
+                  <button
+                    onClick={() => setShowCreateGroup(true)}
+                    className="w-full flex items-center gap-3 py-3 px-3 rounded-xl bg-slate-50 hover:bg-blue-50 transition-colors text-left"
+                    data-testid="settings-new-group"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Plus className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">Yeni Grup Oluştur</p>
+                      <p className="text-xs text-slate-400">Şirket içi grup sohbeti başlat</p>
+                    </div>
+                  </button>
+                )}
+                <div className="flex items-center gap-3 py-3 px-3 rounded-xl bg-slate-50">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    {user.avatar ? (
+                      <img src={user.avatar} alt={user.fullName} className="w-10 h-10 rounded-full object-cover" />
+                    ) : (
+                      <span className="text-primary font-bold text-sm">{getInitials(user.fullName)}</span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">{user.fullName}</p>
+                    <p className="text-xs text-slate-400">{getRoleLabel(user.role)}</p>
                   </div>
                 </div>
               </div>
-            ))}
-
-            {/* Gruplar */}
-            {filteredGroups.map(group => (
-              <div
-                key={group.id}
-                onClick={() => openChat(null, group)}
-                className="flex items-center gap-3 py-2.5 px-3 cursor-pointer hover:bg-slate-50 active:bg-blue-50 transition-colors"
-                data-testid={`group-${group.id}`}
-              >
-                <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                  <Users className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-sm text-slate-800 truncate">{group.name}</h4>
-                    <span className="text-[10px] text-slate-400 shrink-0 ml-1">{group.memberCount} üye</span>
-                  </div>
-                  <p className="text-xs text-slate-500 truncate mt-0.5">Grup sohbeti</p>
-                </div>
-              </div>
-            ))}
-
-            {filteredUsers.length === 0 && filteredGroups.length === 0 && (
-              <p className="text-center text-muted-foreground text-sm py-8 px-4">
-                {searchTerm ? "Sonuç bulunamadı" : "Henüz yazışma yok.\nArama ikonuna basarak kişi bulun."}
-              </p>
             )}
           </div>
 
-          {/* Floating compose button */}
-          {isManager && (
+          {/* Floating compose button — tab bar'ın üstünde */}
+          <button
+            onClick={() => { setActiveTab("kisiler"); }}
+            className="absolute bottom-16 right-4 w-12 h-12 rounded-full bg-primary text-white shadow-xl flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+            title="Yeni Sohbet"
+            data-testid="button-new-chat"
+          >
+            <PenLine className="h-5 w-5" />
+          </button>
+
+          {/* Alt tab bar */}
+          <div className="shrink-0 flex border-t border-slate-100 bg-white">
             <button
-              onClick={() => setShowCreateGroup(true)}
-              className="absolute bottom-4 right-4 w-12 h-12 rounded-full bg-primary text-white shadow-xl flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
-              title="Yeni Grup Oluştur"
-              data-testid="button-new-group"
+              onClick={() => setActiveTab("sohbetler")}
+              className={cn("flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors", activeTab === "sohbetler" ? "text-primary" : "text-slate-400")}
+              data-testid="tab-sohbetler"
             >
-              <PenLine className="h-5 w-5" />
+              {activeTab === "sohbetler" ? (
+                <span className="bg-primary/10 rounded-full px-3 py-1 flex items-center gap-1">
+                  <MessageSquare className="h-4 w-4 fill-primary stroke-primary" />
+                </span>
+              ) : (
+                <MessageSquare className="h-5 w-5" />
+              )}
+              <span className="text-[10px] font-medium">Sohbetler</span>
             </button>
-          )}
+            <button
+              onClick={() => setActiveTab("kisiler")}
+              className={cn("flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors", activeTab === "kisiler" ? "text-primary" : "text-slate-400")}
+              data-testid="tab-kisiler"
+            >
+              {activeTab === "kisiler" ? (
+                <span className="bg-primary/10 rounded-full px-3 py-1 flex items-center gap-1">
+                  <Users className="h-4 w-4 fill-primary stroke-primary" />
+                </span>
+              ) : (
+                <Users className="h-5 w-5" />
+              )}
+              <span className="text-[10px] font-medium">Kişiler</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("ayarlar")}
+              className={cn("flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors", activeTab === "ayarlar" ? "text-primary" : "text-slate-400")}
+              data-testid="tab-ayarlar"
+            >
+              {activeTab === "ayarlar" ? (
+                <span className="bg-primary/10 rounded-full px-3 py-1 flex items-center gap-1">
+                  <Settings className="h-4 w-4 stroke-primary" />
+                </span>
+              ) : (
+                <Settings className="h-5 w-5" />
+              )}
+              <span className="text-[10px] font-medium">Ayarlar</span>
+            </button>
+          </div>
         </div>
 
         {/* Panel 2: Chat area */}
@@ -882,6 +1007,13 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
                 <button onClick={closeChat} className="p-1 rounded hover:bg-slate-100 text-slate-600" data-testid="button-back-chat">
                   <ChevronLeft className="h-5 w-5" />
                 </button>
+                {activeUser.avatar ? (
+                  <img src={activeUser.avatar} alt={activeUser.fullName} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
+                    {getInitials(activeUser.fullName)}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-sm leading-tight">{activeUser.fullName}</h3>
                   <p className="text-xs text-green-600 flex items-center gap-1">
