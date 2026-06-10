@@ -739,32 +739,37 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         <div className="flex flex-col bg-white overflow-hidden relative" style={{ width: "50%", flexShrink: 0, height: "100%" }}>
 
           {/* Header */}
-          <div className="px-3 pt-3 pb-1 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2">
-              <AlignJustify className="h-5 w-5 text-slate-500" />
-              <span className="text-base font-bold text-primary">Mesajlar</span>
-            </div>
-            <Search className="h-4 w-4 text-primary" />
+          <div className="px-4 pt-4 pb-2 flex items-center justify-between shrink-0">
+            <span className="text-lg font-bold text-primary">
+              {activeTab === "sohbetler" ? "Mesajlar" : activeTab === "kisiler" ? "Kişiler" : "Ayarlar"}
+            </span>
+            {activeTab !== "ayarlar" && (
+              <div className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 cursor-pointer">
+                <Search className="h-4 w-4 text-primary" />
+              </div>
+            )}
           </div>
 
-          {/* Arama çubuğu — her zaman görünür */}
-          <div className="px-3 pt-1 pb-2 shrink-0">
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-              <Input
-                placeholder="Sohbet, kişi ara..."
-                className="pl-9 bg-slate-100 h-9 text-sm rounded-full border-0 focus-visible:ring-1"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                data-testid="input-search"
-              />
-              {searchTerm && (
-                <button onClick={() => setSearchTerm("")} className="absolute right-3 top-2.5">
-                  <X className="h-3.5 w-3.5 text-slate-400" />
-                </button>
-              )}
+          {/* Arama çubuğu — Sohbetler ve Kişiler tabında görünür */}
+          {activeTab !== "ayarlar" && (
+            <div className="px-3 pb-2 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                <Input
+                  placeholder={activeTab === "kisiler" ? "Kişi ara..." : "Sohbet, kişi ara..."}
+                  className="pl-9 bg-slate-100 h-9 text-sm rounded-full border-0 focus-visible:ring-1"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  data-testid="input-search"
+                />
+                {searchTerm && (
+                  <button onClick={() => setSearchTerm("")} className="absolute right-3 top-2.5">
+                    <X className="h-3.5 w-3.5 text-slate-400" />
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Story / Hızlı erişim avatarlar — sadece Sohbetler tabında ve arama yokken */}
           {activeTab === "sohbetler" && !searchTerm && (
@@ -878,7 +883,11 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
             {/* ── Kişiler tab — tüm kullanıcılar ── */}
             {activeTab === "kisiler" && (<>
-              {users.filter(u => u.id !== user.id).map(u => (
+              {users.filter(u => u.id !== user.id && (
+                !searchTerm ||
+                u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                u.department?.toLowerCase().includes(searchTerm.toLowerCase())
+              )).map(u => (
                 <div
                   key={u.id}
                   onClick={() => { openChat(u, null); setActiveTab("sohbetler"); }}
@@ -908,34 +917,65 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
             {/* ── Ayarlar tab ── */}
             {activeTab === "ayarlar" && (
-              <div className="p-4 space-y-3">
-                <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold mb-2">Sohbet Ayarları</p>
-                {isManager && (
-                  <button
-                    onClick={() => setShowCreateGroup(true)}
-                    className="w-full flex items-center gap-3 py-3 px-3 rounded-xl bg-slate-50 hover:bg-blue-50 transition-colors text-left"
-                    data-testid="settings-new-group"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Plus className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">Yeni Grup Oluştur</p>
-                      <p className="text-xs text-slate-400">Şirket içi grup sohbeti başlat</p>
-                    </div>
-                  </button>
-                )}
-                <div className="flex items-center gap-3 py-3 px-3 rounded-xl bg-slate-50">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="p-4 space-y-4">
+                {/* Profil kartı */}
+                <div className="flex flex-col items-center py-6 gap-3">
+                  <div className="relative">
                     {user.avatar ? (
-                      <img src={user.avatar} alt={user.fullName} className="w-10 h-10 rounded-full object-cover" />
+                      <img src={user.avatar} alt={user.fullName} className="w-20 h-20 rounded-full object-cover ring-4 ring-primary/20" />
                     ) : (
-                      <span className="text-primary font-bold text-sm">{getInitials(user.fullName)}</span>
+                      <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center ring-4 ring-primary/20">
+                        <span className="text-primary font-bold text-2xl">{getInitials(user.fullName)}</span>
+                      </div>
                     )}
+                    <span className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{user.fullName}</p>
-                    <p className="text-xs text-slate-400">{getRoleLabel(user.role)}</p>
+                  <div className="text-center">
+                    <p className="font-bold text-base text-slate-900">{user.fullName}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{getRoleLabel(user.role)}{user.department ? ` · ${user.department}` : ""}</p>
+                  </div>
+                </div>
+
+                {/* Bölücü */}
+                <div className="h-px bg-slate-100" />
+
+                {/* Menü öğeleri */}
+                <div className="space-y-1">
+                  {isManager && (
+                    <button
+                      onClick={() => setShowCreateGroup(true)}
+                      className="w-full flex items-center gap-3 py-3 px-3 rounded-xl hover:bg-slate-50 transition-colors text-left"
+                      data-testid="settings-new-group"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Users className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-800">Yeni Grup Oluştur</p>
+                        <p className="text-xs text-slate-400">Şirket içi grup sohbeti başlat</p>
+                      </div>
+                      <ChevronLeft className="h-4 w-4 text-slate-300 rotate-180 shrink-0" />
+                    </button>
+                  )}
+
+                  <div className="flex items-center gap-3 py-3 px-3 rounded-xl hover:bg-slate-50">
+                    <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                      <MessageSquare className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800">Bildirimler</p>
+                      <p className="text-xs text-slate-400">Mesaj bildirimleri açık</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 py-3 px-3 rounded-xl hover:bg-slate-50">
+                    <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center shrink-0">
+                      <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800">Durum</p>
+                      <p className="text-xs text-slate-400">Çevrimiçi</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -953,49 +993,28 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
           </button>
 
           {/* Alt tab bar */}
-          <div className="shrink-0 flex border-t border-slate-100 bg-white">
-            <button
-              onClick={() => setActiveTab("sohbetler")}
-              className={cn("flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors", activeTab === "sohbetler" ? "text-primary" : "text-slate-400")}
-              data-testid="tab-sohbetler"
-            >
-              {activeTab === "sohbetler" ? (
-                <span className="bg-primary/10 rounded-full px-3 py-1 flex items-center gap-1">
-                  <MessageSquare className="h-4 w-4 fill-primary stroke-primary" />
-                </span>
-              ) : (
-                <MessageSquare className="h-5 w-5" />
-              )}
-              <span className="text-[10px] font-medium">Sohbetler</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("kisiler")}
-              className={cn("flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors", activeTab === "kisiler" ? "text-primary" : "text-slate-400")}
-              data-testid="tab-kisiler"
-            >
-              {activeTab === "kisiler" ? (
-                <span className="bg-primary/10 rounded-full px-3 py-1 flex items-center gap-1">
-                  <Users className="h-4 w-4 fill-primary stroke-primary" />
-                </span>
-              ) : (
-                <Users className="h-5 w-5" />
-              )}
-              <span className="text-[10px] font-medium">Kişiler</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("ayarlar")}
-              className={cn("flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors", activeTab === "ayarlar" ? "text-primary" : "text-slate-400")}
-              data-testid="tab-ayarlar"
-            >
-              {activeTab === "ayarlar" ? (
-                <span className="bg-primary/10 rounded-full px-3 py-1 flex items-center gap-1">
-                  <Settings className="h-4 w-4 stroke-primary" />
-                </span>
-              ) : (
-                <Settings className="h-5 w-5" />
-              )}
-              <span className="text-[10px] font-medium">Ayarlar</span>
-            </button>
+          <div className="shrink-0 flex border-t border-slate-100 bg-white pb-safe">
+            {([
+              { key: "sohbetler", label: "Sohbetler", Icon: MessageSquare },
+              { key: "kisiler",   label: "Kişiler",   Icon: Users },
+              { key: "ayarlar",  label: "Ayarlar",   Icon: Settings },
+            ] as const).map(({ key, label, Icon }) => (
+              <button
+                key={key}
+                onClick={() => setActiveTab(key)}
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center pt-2 pb-3 gap-0.5 relative transition-colors",
+                  activeTab === key ? "text-primary" : "text-slate-400"
+                )}
+                data-testid={`tab-${key}`}
+              >
+                {activeTab === key && (
+                  <span className="absolute top-0 left-1/4 right-1/4 h-0.5 bg-primary rounded-b-full" />
+                )}
+                <Icon className={cn("h-5 w-5", activeTab === key && "stroke-[2.5px]")} />
+                <span className={cn("text-[10px] font-medium", activeTab === key ? "font-semibold" : "")}>{label}</span>
+              </button>
+            ))}
           </div>
         </div>
 
