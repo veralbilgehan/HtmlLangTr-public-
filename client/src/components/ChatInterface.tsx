@@ -222,6 +222,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         if (data.messages.length > 0) {
           const last = data.messages[data.messages.length - 1];
           setLastMessagesMap(prev => ({ ...prev, [userId]: last.content || (last.fileName ? "📎 " + last.fileName : "") }));
+          setLastMessageTimesMap(prev => ({ ...prev, [userId]: last.createdAt }));
         }
         if (scrollToBottom) setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
       }
@@ -783,7 +784,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         style={{ width: "200%", transform: chatOpen ? "translateX(-50%)" : "translateX(0)" }}
       >
         {/* Panel 1: Contact list */}
-        <div className="flex flex-col bg-white overflow-hidden relative" style={{ width: "50%", flexShrink: 0, height: "100%" }}>
+        <div className="flex flex-col bg-white overflow-hidden relative" style={{ width: "50%", flexShrink: 0, minHeight: 0, height: "100%" }}>
 
           {/* Header */}
           <div className="px-4 pt-4 pb-2 flex items-center justify-between shrink-0">
@@ -1090,7 +1091,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
         </div>
 
         {/* Panel 2: Chat area */}
-        <div className="flex flex-col overflow-hidden" style={{ width: "50%", flexShrink: 0, height: "100%", background: "#f5f7fa" }}>
+        <div className="flex flex-col overflow-hidden" style={{ width: "50%", flexShrink: 0, minHeight: 0, height: "100%", background: "#f5f7fa" }}>
           {activeUser ? (
             <>
               {/* Header */}
@@ -1130,7 +1131,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 px-3 py-3 overflow-y-auto space-y-2">
+              <div className="flex-1 min-h-0 px-3 py-3 overflow-y-auto space-y-2">
                 {messages.map((msg, i) => {
                   const isOwn = msg.senderId === user.id;
                   const prevMsg = messages[i - 1];
@@ -1200,7 +1201,7 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
               </div>
 
               {/* Group Messages */}
-              <div className="flex-1 px-3 py-3 overflow-y-auto space-y-2">
+              <div className="flex-1 min-h-0 px-3 py-3 overflow-y-auto space-y-2">
                 {groupMessages.map((msg, i) => {
                   const isOwn = msg.senderId === user.id;
                   const sender = userMap.get(msg.senderId);
