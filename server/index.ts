@@ -61,6 +61,22 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Auto-seed if database has no users
+  try {
+    const { db } = await import("./db");
+    const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+    if (!userCount || userCount.count === 0) {
+      console.log("[AUTO-SEED] Database is empty. Seeding...");
+      const { seed } = await import("./seed");
+      await seed(false);
+      console.log("[AUTO-SEED] Seeding completed!");
+    } else {
+      console.log(`[AUTO-SEED] Database already has ${userCount.count} users.`);
+    }
+  } catch (e) {
+    console.error("[AUTO-SEED] Failed to check/run auto-seed:", e);
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

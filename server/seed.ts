@@ -1,6 +1,6 @@
 import { storage } from "./storage";
 
-async function seed() {
+export async function seed(exitOnComplete = false) {
   console.log("Starting database seed...");
 
   try {
@@ -167,10 +167,20 @@ async function seed() {
     console.log("\nDatabase seed completed successfully!");
   } catch (error) {
     console.error("Error seeding database:", error);
-    process.exit(1);
+    if (exitOnComplete) process.exit(1);
+    throw error;
   }
 
-  process.exit(0);
+  if (exitOnComplete) process.exit(0);
 }
 
-seed();
+// Only auto-run if executed directly as a script
+const isMain = process.argv[1] && (
+  process.argv[1].endsWith("seed.ts") || 
+  process.argv[1].endsWith("seed") || 
+  process.argv[1].includes("seed.ts") || 
+  process.argv[1].includes("seed")
+);
+if (isMain) {
+  seed(true);
+}

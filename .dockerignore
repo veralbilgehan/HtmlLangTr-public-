@@ -9,3 +9,7 @@ dist
 coverage
 uploads/*
 !uploads/.gitkeep
+.local
+data
+*.rar
+*.db*
