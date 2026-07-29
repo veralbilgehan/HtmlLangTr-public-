@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Paperclip, File, Search, X, Download, Loader2, Camera, Image, Users, Plus, Trash2, UserPlus, ChevronLeft, PenLine, AlignJustify, MessageSquare, Settings, Phone, Video, Mic, MicOff } from "lucide-react";
+import { Send, Paperclip, File, Search, X, Download, Loader2, Camera, Image, Users, Plus, Trash2, UserPlus, ChevronLeft, PenLine, AlignJustify, MessageSquare, Settings, Phone, Video, Mic, MicOff, Archive } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -530,31 +530,80 @@ export default function ChatInterface({ user }: ChatInterfaceProps) {
 
   // ─── Message bubble (shared) ──────────────────────────────────────────────
 
+  const handleArchiveChatFile = async (e: React.MouseEvent, msg: Message | GroupMessage) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const res = await fetch("/api/companies/archive-chat-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          fileName: msg.fileName,
+          fileUrl: msg.fileUrl,
+          fileSize: msg.fileSize,
+          fileType: msg.fileType
+        })
+      });
+
+      if (res.ok) {
+        toast({ title: "Başarılı", description: "Dosya şirketin yerel klasörüne kaydedildi." });
+      } else {
+        const err = await res.json();
+        toast({ title: "Hata", description: err.message || "Dosya arşivlenemedi", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Hata", description: "Bağlantı hatası", variant: "destructive" });
+    }
+  };
+
   const renderFileBubble = (msg: Message | GroupMessage, isOwn: boolean) => (
     <>
       {msg.fileUrl && (
         isImageFile(msg.fileType) ? (
-          <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="block mb-2">
-            <img src={msg.fileUrl} alt={msg.fileName || "Fotoğraf"} className="max-w-full rounded-lg max-h-48 object-cover" />
-          </a>
+          <div className="mb-2">
+            <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
+              <img src={msg.fileUrl} alt={msg.fileName || "Fotoğraf"} className="max-w-full rounded-lg max-h-48 object-cover" />
+            </a>
+            <Button
+              size="xs"
+              type="button"
+              variant="outline"
+              onClick={(e) => handleArchiveChatFile(e, msg)}
+              className={cn("h-7 gap-1 px-2 text-[10px] w-full border-slate-200", isOwn ? "text-white hover:text-white border-white/20 bg-white/5 hover:bg-white/10" : "text-slate-700 hover:bg-slate-50")}
+            >
+              <Archive className="h-3 w-3" /> Şirket Klasörüne Kaydet
+            </Button>
+          </div>
         ) : (
-          <a
-            href={msg.fileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn("flex items-center gap-3 p-2 rounded-lg mb-2", isOwn ? "bg-primary-foreground/10" : "bg-slate-100")}
-          >
-            <div className={cn("p-2 rounded", isOwn ? "bg-primary-foreground/20" : "bg-slate-200")}>
-              <File className={cn("h-6 w-6", isOwn ? "text-primary-foreground" : "text-blue-500")} />
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <p className={cn("font-medium text-sm truncate", isOwn ? "text-primary-foreground" : "text-slate-800")}>{msg.fileName}</p>
-              <p className={cn("text-xs", isOwn ? "text-primary-foreground/70" : "text-slate-500")}>
-                {msg.fileSize ? formatFileSize(msg.fileSize) : ""}
-              </p>
-            </div>
-            <Download className={cn("h-4 w-4", isOwn ? "text-primary-foreground" : "text-blue-500")} />
-          </a>
+          <div className="flex flex-col gap-1.5 mb-2">
+            <a
+              href={msg.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn("flex items-center gap-3 p-2 rounded-lg", isOwn ? "bg-primary-foreground/10" : "bg-slate-100")}
+            >
+              <div className={cn("p-2 rounded", isOwn ? "bg-primary-foreground/20" : "bg-slate-200")}>
+                <File className={cn("h-6 w-6", isOwn ? "text-primary-foreground" : "text-blue-500")} />
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <p className={cn("font-medium text-sm truncate", isOwn ? "text-primary-foreground" : "text-slate-800")}>{msg.fileName}</p>
+                <p className={cn("text-xs", isOwn ? "text-primary-foreground/70" : "text-slate-500")}>
+                  {msg.fileSize ? formatFileSize(msg.fileSize) : ""}
+                </p>
+              </div>
+              <Download className={cn("h-4 w-4 shrink-0", isOwn ? "text-primary-foreground" : "text-blue-500")} />
+            </a>
+            <Button
+              size="xs"
+              type="button"
+              variant="outline"
+              onClick={(e) => handleArchiveChatFile(e, msg)}
+              className={cn("h-7 gap-1 px-2 text-[10px] w-full border-slate-200", isOwn ? "text-white hover:text-white border-white/20 bg-white/5 hover:bg-white/10" : "text-slate-700 hover:bg-slate-50")}
+            >
+              <Archive className="h-3 w-3" /> Şirket Klasörüne Kaydet
+            </Button>
+          </div>
         )
       )}
       {msg.content && <p className="text-sm">{msg.content}</p>}

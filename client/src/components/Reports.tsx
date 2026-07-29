@@ -1,12 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, startOfWeek, startOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { format, startOfWeek, startOfMonth } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Calendar, Users, TrendingUp, Download, FileText } from "lucide-react";
+import { Clock, Calendar, Users, TrendingUp, Download, FileText, FolderOpen, Trash2, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import type { User } from "@shared/schema";
 
 interface ReportsProps {
@@ -29,6 +30,77 @@ function totalSeconds(shifts: any[]): number {
 
 export default function Reports({ user }: ReportsProps) {
   const isManager = user.role === "manager" || user.role === "super_admin";
+  const { toast } = useToast();
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [archives, setArchives] = useState<any[]>([]);
+  const [isArchivesLoading, setIsArchivesLoading] = useState(false);
+
+  const fetchArchives = async () => {
+    setIsArchivesLoading(true);
+    try {
+      const res = await fetch("/api/companies/archives", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setArchives(data.archives || []);
+      }
+    } catch (err) {
+      console.error("Fetch archives error:", err);
+    } finally {
+      setIsArchivesLoading(false);
+    }
+  };
+
+  const handleArchiveReport = async () => {
+    setIsArchiving(true);
+    try {
+      const res = await fetch("/api/companies/archive-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          reportType: "shift",
+          dateFilter
+        })
+      });
+
+      if (res.ok) {
+        toast({ title: "Başarılı", description: "Mesai raporu şirketin yerel arşivine kaydedildi." });
+        fetchArchives();
+      } else {
+        const err = await res.json();
+        toast({ title: "Hata", description: err.message || "Rapor arşivlenemedi", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Hata", description: "Bağlantı hatası", variant: "destructive" });
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
+  const handleDeleteArchive = async (id: string) => {
+    if (!window.confirm("Bu arşiv dosyasını silmek istediğinize emin misiniz?")) return;
+    try {
+      const res = await fetch(`/api/companies/archives/${id}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+      if (res.ok) {
+        toast({ title: "Başarılı", description: "Arşiv dosyası silindi." });
+        fetchArchives();
+      } else {
+        const err = await res.json();
+        toast({ title: "Hata", description: err.message || "Dosya silinemedi", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Hata", description: "Bağlantı hatası", variant: "destructive" });
+    }
+  };
+
+  useEffect(() => {
+    if (isManager) {
+      fetchArchives();
+    }
+  }, []);
   const [dateFilter, setDateFilter] = useState<DateFilter>("month");
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
 
@@ -104,16 +176,29 @@ export default function Reports({ user }: ReportsProps) {
             {isManager ? "Tüm çalışanların mesai kayıtları" : "Mesai kayıtlarınız"}
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={exportCSV}
-          disabled={shifts.length === 0}
-          data-testid="button-export-csv"
-          className="gap-2"
-        >
-          <Download className="h-4 w-4" /> CSV İndir
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportCSV}
+            disabled={shifts.length === 0}
+            data-testid="button-export-csv"
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" /> CSV İndir
+          </Button>
+          {isManager && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleArchiveReport}
+              disabled={shifts.length === 0 || isArchiving}
+              className="gap-2 bg-slate-800 text-white hover:bg-slate-700"
+            >
+              <Archive className="h-4 w-4" /> Şirket Klasörüne Kaydet
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Özet kartları */}
@@ -300,6 +385,86 @@ export default function Reports({ user }: ReportsProps) {
           )}
         </CardContent>
       </Card>
+      {/* Şirket Yerel Klasörü Arşivi (Only for Managers) */}
+      {isManager && (
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-base font-semibold text-slate-700 flex items-center gap-2">
+              <FolderOpen className="h-5 w-5 text-primary" />
+              Şirket Yerel Klasörü Arşivi
+            </CardTitle>
+            <CardDescription>
+              Şirketinizin local klasöründe saklanan chat dosyaları, mesai raporları ve servis raporları.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {isArchivesLoading ? (
+              <div className="p-8 text-center text-slate-400">Yükleniyor...</div>
+            ) : archives.length === 0 ? (
+              <div className="p-8 text-center text-slate-400">
+                Şirket klasörüne henüz hiçbir dosya veya rapor kaydedilmemiş.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead>
+                    <tr className="border-b bg-slate-50 text-slate-600 text-xs uppercase tracking-wide">
+                      <th className="px-4 py-3 font-semibold">Dosya Adı</th>
+                      <th className="px-4 py-3 font-semibold">Dosya Türü</th>
+                      <th className="px-4 py-3 font-semibold">Boyut</th>
+                      <th className="px-4 py-3 font-semibold">Kayıt Tarihi</th>
+                      <th className="px-4 py-3 font-semibold">İşlemler</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {archives.map((file) => (
+                      <tr key={file.id} className="border-b hover:bg-slate-50/50">
+                        <td className="px-4 py-3 font-medium text-slate-800">
+                          {file.fileName}
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          {file.fileType === "chat_attachment" && (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Chat Dosyası</Badge>
+                          )}
+                          {file.fileType === "shift_report" && (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Mesai Raporu</Badge>
+                          )}
+                          {file.fileType === "service_report" && (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Servis Raporu</Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-slate-500">
+                          {file.fileSize ? `${Math.round(file.fileSize / 1024)} KB` : "-"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 text-xs">
+                          {file.createdAt ? format(new Date(file.createdAt), "dd.MM.yyyy HH:mm") : "-"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={file.filePath}
+                              download={file.fileName}
+                              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                            >
+                              <Download className="h-3.5 w-3.5" /> İndir
+                            </a>
+                            <button
+                              onClick={() => handleDeleteArchive(file.id)}
+                              className="inline-flex items-center gap-1 text-xs text-rose-600 hover:text-rose-800 font-semibold ml-2"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" /> Sil
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

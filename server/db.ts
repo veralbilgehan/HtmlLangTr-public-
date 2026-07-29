@@ -138,6 +138,31 @@ db.exec(`
     read INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS services (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    user_id TEXT NOT NULL REFERENCES users(id),
+    company_id TEXT REFERENCES companies(id),
+    service_name TEXT NOT NULL,
+    plate TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    estimated_duration_minutes INTEGER NOT NULL,
+    end_time TEXT,
+    actual_duration_minutes INTEGER,
+    difference_minutes INTEGER,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS saved_files (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    company_id TEXT REFERENCES companies(id),
+    file_name TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_type TEXT NOT NULL,
+    file_size INTEGER,
+    created_at TEXT DEFAULT (datetime('now')),
+    created_by TEXT REFERENCES users(id)
+  );
 `);
 
 console.log("[DB] SQLite veritabanı hazır:", dbPath);

@@ -12,6 +12,8 @@ import type {
   Group, InsertGroup,
   GroupMember,
   GroupMessage, InsertGroupMessage,
+  Service, InsertService,
+  SavedFile, InsertSavedFile,
 } from "@shared/schema";
 
 // ─── Row mappers (SQLite snake_case → TS camelCase) ───────────────────────────
@@ -60,6 +62,39 @@ function mapGroupMessage(r: any): GroupMessage {
   return { id: r.id, groupId: r.group_id, senderId: r.sender_id, content: r.content ?? null, fileUrl: r.file_url ?? null, fileName: r.file_name ?? null, fileSize: r.file_size ?? null, fileType: r.file_type ?? null, createdAt: r.created_at ? new Date(r.created_at) : null };
 }
 
+function mapService(r: any): Service {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    companyId: r.company_id ?? null,
+    serviceName: r.service_name,
+    plate: r.plate,
+    startTime: new Date(r.start_time),
+    estimatedDurationMinutes: r.estimated_duration_minutes,
+    endTime: r.end_time ? new Date(r.end_time) : null,
+    actualDurationMinutes: r.actual_duration_minutes ?? null,
+    differenceMinutes: r.difference_minutes ?? null,
+    fileUrl: r.file_url ?? null,
+    fileName: r.file_name ?? null,
+    fileSize: r.file_size ?? null,
+    fileType: r.file_type ?? null,
+    createdAt: r.created_at ? new Date(r.created_at) : null
+  };
+}
+
+function mapSavedFile(r: any): SavedFile {
+  return {
+    id: r.id,
+    companyId: r.company_id ?? null,
+    fileName: r.file_name,
+    filePath: r.file_path,
+    fileType: r.file_type,
+    fileSize: r.file_size ?? null,
+    createdAt: r.created_at ? new Date(r.created_at) : null,
+    createdBy: r.created_by ?? null,
+  };
+}
+
 // ─── IStorage interface ───────────────────────────────────────────────────────
 
 export interface IStorage {
@@ -81,6 +116,7 @@ export interface IStorage {
   getDefaultActivityTypes(): Promise<ActivityType[]>;
   createActivityType(activityType: InsertActivityType): Promise<ActivityType>;
   updateActivityType(id: string, updates: Partial<ActivityType>): Promise<ActivityType | undefined>;
+  deleteActivityType(id: string): Promise<void>;
 
   createShift(shift: InsertShift): Promise<Shift>;
   updateShift(id: string, updates: Partial<Shift>): Promise<Shift | undefined>;
@@ -119,6 +155,17 @@ export interface IStorage {
   createGroupMessage(msg: InsertGroupMessage): Promise<GroupMessage>;
   getGroupMessages(groupId: string): Promise<GroupMessage[]>;
   deleteGroup(id: string): Promise<void>;
+
+  createService(service: InsertService): Promise<Service>;
+  updateService(id: string, updates: Partial<Service>): Promise<Service | undefined>;
+  getActiveService(userId: string): Promise<Service | undefined>;
+  getUserServices(userId: string): Promise<Service[]>;
+  getAllServices(companyId: string | null): Promise<Service[]>;
+
+  getSavedFilesByCompany(companyId: string): Promise<SavedFile[]>;
+  createSavedFile(file: InsertSavedFile): Promise<SavedFile>;
+  deleteSavedFile(id: string): Promise<void>;
+  getSavedFile(id: string): Promise<SavedFile | undefined>;
 }
 
 // ─── DatabaseStorage (SQLite) ─────────────────────────────────────────────────
@@ -224,6 +271,10 @@ export class DatabaseStorage implements IStorage {
     if (updates.isDefault !== undefined) { fields.push("is_default = ?"); vals.push(updates.isDefault ? 1 : 0); }
     if (fields.length) { vals.push(id); db.prepare(`UPDATE activity_types SET ${fields.join(", ")} WHERE id = ?`).run(...vals); }
     return this.getActivityType(id);
+  }
+
+  async deleteActivityType(id: string): Promise<void> {
+    db.prepare("DELETE FROM activity_types WHERE id = ?").run(id);
   }
 
   // ── Shifts ─────────────────────────────────────────────────────────────────
@@ -429,6 +480,84 @@ export class DatabaseStorage implements IStorage {
     db.prepare("DELETE FROM group_messages WHERE group_id = ?").run(id);
     db.prepare("DELETE FROM group_members WHERE group_id = ?").run(id);
     db.prepare("DELETE FROM groups WHERE id = ?").run(id);
+  }
+
+  async getServiceById(id: string): Promise<Service | undefined> {
+    const r = db.prepare("SELECT * FROM services WHERE id = ?").get(id) as any;
+    return r ? mapService(r) : undefined;
+  }
+
+  async createService(data: InsertService): Promise<Service> {
+    const id = randomUUID();
+    db.prepare(`
+      INSERT INTO services (
+        id, user_id, company_id, service_name, plate, start_time, estimated_duration_minutes,
+        file_url, file_name, file_size, file_type
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      data.userId,
+      data.companyId ?? null,
+      data.serviceName,
+      data.plate,
+      data.startTime instanceof Date ? data.startTime.toISOString() : data.startTime,
+      data.estimatedDurationMinutes,
+      data.fileUrl ?? null,
+      data.fileName ?? null,
+      data.fileSize ?? null,
+      data.fileType ?? null
+    );
+    return (await this.getServiceById(id))!;
+  }
+
+  async updateService(id: string, updates: Partial<Service>): Promise<Service | undefined> {
+    const fields: string[] = [];
+    const vals: any[] = [];
+    if (updates.endTime !== undefined) { fields.push("end_time = ?"); vals.push(updates.endTime ? (updates.endTime instanceof Date ? updates.endTime.toISOString() : updates.endTime) : null); }
+    if (updates.actualDurationMinutes !== undefined) { fields.push("actual_duration_minutes = ?"); vals.push(updates.actualDurationMinutes); }
+    if (updates.differenceMinutes !== undefined) { fields.push("difference_minutes = ?"); vals.push(updates.differenceMinutes); }
+    if (fields.length) {
+      vals.push(id);
+      db.prepare(`UPDATE services SET ${fields.join(", ")} WHERE id = ?`).run(...vals);
+    }
+    return this.getServiceById(id);
+  }
+
+  async getActiveService(userId: string): Promise<Service | undefined> {
+    const r = db.prepare("SELECT * FROM services WHERE user_id = ? AND end_time IS NULL ORDER BY start_time DESC LIMIT 1").get(userId) as any;
+    return r ? mapService(r) : undefined;
+  }
+
+  async getUserServices(userId: string): Promise<Service[]> {
+    return (db.prepare("SELECT * FROM services WHERE user_id = ? ORDER BY start_time DESC").all(userId) as any[]).map(mapService);
+  }
+
+  async getAllServices(companyId: string | null): Promise<Service[]> {
+    if (companyId) {
+      return (db.prepare("SELECT * FROM services WHERE company_id = ? ORDER BY start_time DESC").all(companyId) as any[]).map(mapService);
+    }
+    return (db.prepare("SELECT * FROM services ORDER BY start_time DESC").all() as any[]).map(mapService);
+  }
+
+  // ── Saved Files ─────────────────────────────────────────────────────────────
+  async getSavedFilesByCompany(companyId: string): Promise<SavedFile[]> {
+    return (db.prepare("SELECT * FROM saved_files WHERE company_id = ? ORDER BY created_at DESC").all(companyId) as any[]).map(mapSavedFile);
+  }
+
+  async getSavedFile(id: string): Promise<SavedFile | undefined> {
+    const r = db.prepare("SELECT * FROM saved_files WHERE id = ?").get(id) as any;
+    return r ? mapSavedFile(r) : undefined;
+  }
+
+  async createSavedFile(data: InsertSavedFile): Promise<SavedFile> {
+    const id = randomUUID();
+    db.prepare("INSERT INTO saved_files (id, company_id, file_name, file_path, file_type, file_size, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      .run(id, data.companyId ?? null, data.fileName, data.filePath, data.fileType, data.fileSize ?? null, data.createdBy ?? null);
+    return (await this.getSavedFile(id))!;
+  }
+
+  async deleteSavedFile(id: string): Promise<void> {
+    db.prepare("DELETE FROM saved_files WHERE id = ?").run(id);
   }
 }
 

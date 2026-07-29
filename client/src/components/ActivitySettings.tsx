@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Settings, Clock, Bell, Save, Loader2, Send, Info } from "lucide-react";
+import { Settings, Clock, Bell, Save, Loader2, Send, Info, Plus, Trash2, Edit2, Check, X, Wrench } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { type User } from "@/lib/auth";
 
@@ -36,6 +36,109 @@ export default function ActivitySettings({ user }: ActivitySettingsProps) {
     lateWarning2: "Mesai başlangıç saatini geçmenize rağmen mesainizi başlatmadınız. Lütfen durumu yöneticinize bildirin.",
     lateWarning3: "Devamsızlık tutanağı düzenlenecektir. En kısa sürede işyerinizde bulununuz.",
   });
+
+  // Service Types Management states
+  const [newServiceName, setNewServiceName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [isServiceMutating, setIsServiceMutating] = useState(false);
+
+  const { data: activityTypesData, refetch: refetchActivityTypes } = useQuery<{ activityTypes: any[] }>({
+    queryKey: ["activity-types"],
+    queryFn: async () => {
+      const response = await fetch("/api/activity-types", { credentials: "include" });
+      if (!response.ok) throw new Error("Aktivite/Servis türleri yüklenemedi");
+      return response.json();
+    },
+  });
+
+  const serviceTypes = activityTypesData?.activityTypes?.filter(t => t.category === "service") || [];
+
+  const handleAddServiceType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newServiceName.trim()) return;
+
+    setIsServiceMutating(true);
+    try {
+      const response = await fetch("/api/activity-types", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: newServiceName.trim(),
+          category: "service",
+          points: 0
+        })
+      });
+
+      if (response.ok) {
+        toast({ title: "Başarılı", description: "Hizmet türü başarıyla eklendi." });
+        setNewServiceName("");
+        refetchActivityTypes();
+      } else {
+        const err = await response.json();
+        toast({ title: "Hata", description: err.message || "Hizmet türü eklenemedi.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Hata", description: "Sunucu hatası oluştu.", variant: "destructive" });
+    } finally {
+      setIsServiceMutating(false);
+    }
+  };
+
+  const handleUpdateServiceType = async (id: string) => {
+    if (!editingName.trim()) return;
+
+    setIsServiceMutating(true);
+    try {
+      const response = await fetch(`/api/activity-types/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: editingName.trim()
+        })
+      });
+
+      if (response.ok) {
+        toast({ title: "Başarılı", description: "Hizmet türü güncellendi." });
+        setEditingId(null);
+        setEditingName("");
+        refetchActivityTypes();
+      } else {
+        const err = await response.json();
+        toast({ title: "Hata", description: err.message || "Hizmet türü güncellenemedi.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Hata", description: "Sunucu hatası oluştu.", variant: "destructive" });
+    } finally {
+      setIsServiceMutating(false);
+    }
+  };
+
+  const handleDeleteServiceType = async (id: string) => {
+    if (!window.confirm("Bu hizmet türünü silmek istediğinize emin misiniz?")) return;
+
+    setIsServiceMutating(true);
+    try {
+      const response = await fetch(`/api/activity-types/${id}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+
+      if (response.ok) {
+        toast({ title: "Başarılı", description: "Hizmet türü silindi." });
+        refetchActivityTypes();
+      } else {
+        const err = await response.json();
+        toast({ title: "Hata", description: err.message || "Hizmet türü silinemedi.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Hata", description: "Sunucu hatası oluştu.", variant: "destructive" });
+    } finally {
+      setIsServiceMutating(false);
+    }
+  };
 
   const { data, isLoading } = useQuery<{ settings: CompanySettings | null }>({
     queryKey: ["company-settings"],
@@ -271,6 +374,111 @@ export default function ActivitySettings({ user }: ActivitySettingsProps) {
               rows={2}
               placeholder="3. uyarı mesajını girin..."
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Service Types Management Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-primary" />
+            Hizmet Türleri Ayarları
+          </CardTitle>
+          <CardDescription>
+            Saha servislerinde seçilebilecek hizmet türlerini ekleyin, güncelleyin veya silin.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Add New Service Form */}
+          <form onSubmit={handleAddServiceType} className="flex gap-2">
+            <Input
+              placeholder="Yeni hizmet adı (Örn: Kombi Bakımı)"
+              value={newServiceName}
+              onChange={(e) => setNewServiceName(e.target.value)}
+              disabled={isServiceMutating}
+              className="flex-1"
+            />
+            <Button type="submit" disabled={isServiceMutating || !newServiceName.trim()} className="gap-1">
+              <Plus className="h-4 w-4" /> Ekle
+            </Button>
+          </form>
+
+          {/* Service Types List */}
+          <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-60 overflow-y-auto">
+            {serviceTypes.length === 0 ? (
+              <div className="p-4 text-center text-xs text-muted-foreground">
+                Henüz özel hizmet türü eklenmemiş. Sistem varsayılanları kullanılacaktır.
+              </div>
+            ) : (
+              serviceTypes.map((s) => (
+                <div key={s.id} className="p-3 flex items-center justify-between gap-3 text-sm hover:bg-slate-50 transition-colors">
+                  {editingId === s.id ? (
+                    /* Edit Mode */
+                    <div className="flex-1 flex gap-2">
+                      <Input
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        disabled={isServiceMutating}
+                        className="h-8"
+                        autoFocus
+                      />
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        onClick={() => handleUpdateServiceType(s.id)}
+                        disabled={isServiceMutating || !editingName.trim()}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => {
+                          setEditingId(null);
+                          setEditingName("");
+                        }}
+                        disabled={isServiceMutating}
+                        className="h-8 w-8 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    /* View Mode */
+                    <>
+                      <span className="font-medium text-slate-700">{s.name}</span>
+                      <div className="flex gap-1.5 shrink-0">
+                        <Button
+                          size="sm"
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingId(s.id);
+                            setEditingName(s.name);
+                          }}
+                          disabled={isServiceMutating}
+                          className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          type="button"
+                          variant="ghost"
+                          onClick={() => handleDeleteServiceType(s.id)}
+                          disabled={isServiceMutating}
+                          className="h-8 w-8 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

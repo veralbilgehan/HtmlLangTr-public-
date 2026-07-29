@@ -4,3 +4,16 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+.local
+data/
+.env
+.env.local
+uploads/
+scratch.txt
+image.png
+firin.html
+test-js.js
+test.cjs
+test.js
+*.rar
+.vercel/

@@ -284,6 +284,16 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/activity-types/:id", requireAuth, requireManager, async (req: any, res) => {
+    try {
+      await storage.deleteActivityType(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete activity type error:", error);
+      res.status(500).json({ message: "Aktivite/Servis türü silinemedi" });
+    }
+  });
+
   // User management routes (for managers)
   app.get("/api/company/users", requireAuth, requireManager, async (req: any, res) => {
     try {
@@ -599,6 +609,340 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get activities error:", error);
       res.status(500).json({ message: "Aktiviteler alınamadı" });
+    }
+  });
+
+  // Service routes
+  app.get("/api/services/active", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const service = await storage.getActiveService(userId);
+      res.json({ service: service || null });
+    } catch (error) {
+      console.error("Get active service error:", error);
+      res.status(500).json({ message: "Aktif servis bilgisi alınamadı" });
+    }
+  });
+
+  app.post("/api/services/start", requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user as User;
+      const { serviceName, plate, estimatedDurationMinutes, fileUrl, fileName, fileSize, fileType } = req.body;
+
+      // Check if there is already an active service
+      const activeService = await storage.getActiveService(user.id);
+      if (activeService) {
+        return res.status(400).json({ message: "Zaten aktif bir servis hizmetiniz var. Önce onu bitirmelisiniz." });
+      }
+
+      if (!serviceName || !plate || !estimatedDurationMinutes) {
+        return res.status(400).json({ message: "Servis adı, plaka ve tahmini süre zorunludur" });
+      }
+
+      let archivedUrl = null;
+      if (fileUrl && fileName) {
+        try {
+          const filename = path.basename(fileUrl);
+          const srcPath = path.join(uploadDir, filename);
+
+          if (fs.existsSync(srcPath)) {
+            const companyDir = path.join(uploadDir, `company_${user.companyId || 'default'}`);
+            const filesDir = path.join(companyDir, "files");
+            if (!fs.existsSync(filesDir)) {
+              fs.mkdirSync(filesDir, { recursive: true });
+            }
+
+            const destPath = path.join(filesDir, filename);
+            fs.copyFileSync(srcPath, destPath);
+
+            archivedUrl = `/uploads/company_${user.companyId || 'default'}/files/${filename}`;
+
+            // Save to database
+            await storage.createSavedFile({
+              companyId: user.companyId,
+              fileName,
+              filePath: archivedUrl,
+              fileType: "chat_attachment", // Store as chat_attachment or add custom badge, chat_attachment maps nicely to Chat/Services
+              fileSize: fileSize || null,
+              createdBy: user.id
+            });
+          }
+        } catch (copyErr) {
+          console.error("Failed to copy service file to company directory:", copyErr);
+        }
+      }
+
+      const service = await storage.createService({
+        userId: user.id,
+        companyId: user.companyId,
+        serviceName,
+        plate,
+        startTime: new Date(),
+        estimatedDurationMinutes: parseInt(estimatedDurationMinutes, 10),
+        endTime: null,
+        actualDurationMinutes: null,
+        differenceMinutes: null,
+        fileUrl: archivedUrl || fileUrl || null,
+        fileName: fileName || null,
+        fileSize: fileSize || null,
+        fileType: fileType || null,
+      });
+
+      res.json({ service });
+    } catch (error) {
+      console.error("Service start error:", error);
+      res.status(500).json({ message: "Servis başlatma hatası" });
+    }
+  });
+
+  app.post("/api/services/end", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      const activeService = await storage.getActiveService(userId);
+      if (!activeService) {
+        return res.status(400).json({ message: "Aktif servis bulunamadı" });
+      }
+
+      const endTime = new Date();
+      const actualDurationMinutes = Math.max(1, Math.round((endTime.getTime() - new Date(activeService.startTime).getTime()) / 60000));
+      const differenceMinutes = activeService.estimatedDurationMinutes - actualDurationMinutes;
+
+      const service = await storage.updateService(activeService.id, {
+        endTime,
+        actualDurationMinutes,
+        differenceMinutes,
+      });
+
+      res.json({ service });
+    } catch (error) {
+      console.error("Service end error:", error);
+      res.status(500).json({ message: "Servis bitirme hatası" });
+    }
+  });
+
+  app.get("/api/services", requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user as User;
+      let services;
+
+      if (['super_admin', 'manager'].includes(user.role)) {
+        services = await storage.getAllServices(user.companyId);
+      } else {
+        services = await storage.getUserServices(user.id);
+      }
+
+      // Enrich with user name and department
+      const allUsers = ['super_admin', 'manager'].includes(user.role) && user.companyId
+        ? await storage.getCompanyUsers(user.companyId)
+        : [await storage.getUser(user.id)];
+      
+      const userMap: Record<string, any> = {};
+      for (const u of allUsers) {
+        if (u) userMap[u.id] = u;
+      }
+
+      const enriched = services.map((s: any) => ({
+        ...s,
+        userFullName: userMap[s.userId]?.fullName || "Bilinmeyen",
+        userDepartment: userMap[s.userId]?.department || "-",
+      }));
+
+      res.json({ services: enriched });
+    } catch (error) {
+      console.error("Get services error:", error);
+      res.status(500).json({ message: "Servisler alınamadı" });
+    }
+  });
+
+  // Serve company-specific files
+  app.get("/uploads/company_:companyId/files/:filename", requireAuth, (req: any, res) => {
+    const user = req.user as User;
+    if (user.role !== "super_admin" && user.companyId !== req.params.companyId) {
+      return res.status(403).json({ message: "Bu dosyaya erişim izniniz yok" });
+    }
+    const filePath = path.join(uploadDir, `company_${req.params.companyId}`, "files", req.params.filename);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).json({ message: "Dosya bulunamadı" });
+    }
+  });
+
+  app.get("/uploads/company_:companyId/reports/:filename", requireAuth, (req: any, res) => {
+    const user = req.user as User;
+    if (user.role !== "super_admin" && user.companyId !== req.params.companyId) {
+      return res.status(403).json({ message: "Bu rapora erişim izniniz yok" });
+    }
+    const filePath = path.join(uploadDir, `company_${req.params.companyId}`, "reports", req.params.filename);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).json({ message: "Rapor bulunamadı" });
+    }
+  });
+
+  // Archive chat attachment endpoint
+  app.post("/api/companies/archive-chat-file", requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user as User;
+      const companyId = user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Kullanıcı bir şirkete bağlı değil" });
+      }
+
+      const { fileName, fileUrl, fileSize, fileType } = req.body;
+      if (!fileName || !fileUrl) {
+        return res.status(400).json({ message: "Dosya adı ve adresi gereklidir" });
+      }
+
+      const filename = path.basename(fileUrl);
+      const srcPath = path.join(uploadDir, filename);
+
+      if (!fs.existsSync(srcPath)) {
+        return res.status(404).json({ message: "Kaynak dosya bulunamadı" });
+      }
+
+      const companyDir = path.join(uploadDir, `company_${companyId}`);
+      const filesDir = path.join(companyDir, "files");
+      if (!fs.existsSync(filesDir)) {
+        fs.mkdirSync(filesDir, { recursive: true });
+      }
+
+      const destPath = path.join(filesDir, filename);
+      fs.copyFileSync(srcPath, destPath);
+
+      const relativeDestUrl = `/uploads/company_${companyId}/files/${filename}`;
+
+      const saved = await storage.createSavedFile({
+        companyId,
+        fileName,
+        filePath: relativeDestUrl,
+        fileType: "chat_attachment",
+        fileSize: fileSize || null,
+        createdBy: user.id
+      });
+
+      res.json({ success: true, saved });
+    } catch (error) {
+      console.error("Archive chat file error:", error);
+      res.status(500).json({ message: "Dosya şirkete kaydedilemedi" });
+    }
+  });
+
+  // Archive report endpoint
+  app.post("/api/companies/archive-report", requireAuth, requireManager, async (req: any, res) => {
+    try {
+      const user = req.user as User;
+      const companyId = user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Kullanıcı bir şirkete bağlı değil" });
+      }
+
+      const { reportType, dateFilter, userId } = req.body;
+      if (!reportType || (reportType !== "shift" && reportType !== "service")) {
+        return res.status(400).json({ message: "Geçerli bir rapor türü (shift veya service) gereklidir" });
+      }
+
+      let csvContent = "";
+      let fileName = "";
+
+      if (reportType === "shift") {
+        const shifts = await storage.getAllShifts(companyId);
+        const headers = ["Kullanici Adi", "Departman", "Tarih", "Mesai Baslangic", "Mesai Bitis", "Calisma Suresi"];
+        const rows = shifts.map(s => [
+          s.userFullName,
+          s.userDepartment,
+          s.startTime ? new Date(s.startTime).toLocaleDateString("tr-TR") : "",
+          s.startTime ? new Date(s.startTime).toLocaleTimeString("tr-TR", { hour: '2-digit', minute: '2-digit' }) : "",
+          s.endTime ? new Date(s.endTime).toLocaleTimeString("tr-TR", { hour: '2-digit', minute: '2-digit' }) : "Devam ediyor",
+          s.durationSeconds ? `${Math.floor(s.durationSeconds / 60)} dk` : "0 dk"
+        ]);
+        csvContent = "\uFEFF" + [headers, ...rows].map(r => r.join(";")).join("\n");
+        fileName = `mesai-raporu-${Date.now()}.csv`;
+      } else {
+        const services = await storage.getAllServices(companyId);
+        const headers = ["Personel", "Departman", "Servis Hizmeti", "Plaka", "Tarih", "Tahmini", "Bitis", "Gercek", "Fark"];
+        const rows = services.map(s => [
+          s.userFullName || "",
+          s.userDepartment || "",
+          s.serviceName,
+          s.plate,
+          s.startTime ? new Date(s.startTime).toLocaleDateString("tr-TR") : "",
+          `${s.estimatedDurationMinutes} dk`,
+          s.endTime ? new Date(s.endTime).toLocaleTimeString("tr-TR", { hour: '2-digit', minute: '2-digit' }) : "Devam ediyor",
+          s.actualDurationMinutes ? `${s.actualDurationMinutes} dk` : "-",
+          s.differenceMinutes !== null ? (s.differenceMinutes === 0 ? "Zamaninda" : s.differenceMinutes > 0 ? `${s.differenceMinutes} dk Erken` : `${Math.abs(s.differenceMinutes)} dk Gecikme`) : "-"
+        ]);
+        csvContent = "\uFEFF" + [headers, ...rows].map(r => r.join(";")).join("\n");
+        fileName = `servis-raporu-${Date.now()}.csv`;
+      }
+
+      const companyDir = path.join(uploadDir, `company_${companyId}`);
+      const reportsDir = path.join(companyDir, "reports");
+      if (!fs.existsSync(reportsDir)) {
+        fs.mkdirSync(reportsDir, { recursive: true });
+      }
+
+      const destPath = path.join(reportsDir, fileName);
+      fs.writeFileSync(destPath, csvContent);
+
+      const relativeDestUrl = `/uploads/company_${companyId}/reports/${fileName}`;
+
+      const saved = await storage.createSavedFile({
+        companyId,
+        fileName,
+        filePath: relativeDestUrl,
+        fileType: reportType === "shift" ? "shift_report" : "service_report",
+        fileSize: Buffer.byteLength(csvContent),
+        createdBy: user.id
+      });
+
+      res.json({ success: true, saved });
+    } catch (error) {
+      console.error("Archive report error:", error);
+      res.status(500).json({ message: "Rapor şirkete kaydedilemedi" });
+    }
+  });
+
+  // Get company archives list
+  app.get("/api/companies/archives", requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.companyId) {
+        return res.json({ archives: [] });
+      }
+      const archives = await storage.getSavedFilesByCompany(user.companyId);
+      res.json({ archives });
+    } catch (error) {
+      console.error("Get archives error:", error);
+      res.status(500).json({ message: "Arşiv dosyaları listelenemedi" });
+    }
+  });
+
+  // Delete archived file endpoint
+  app.delete("/api/companies/archives/:id", requireAuth, requireManager, async (req: any, res) => {
+    try {
+      const user = req.user as User;
+      const file = await storage.getSavedFile(req.params.id);
+      if (!file) {
+        return res.status(404).json({ message: "Dosya bulunamadı" });
+      }
+      if (user.role !== "super_admin" && file.companyId !== user.companyId) {
+         return res.status(403).json({ message: "Bu dosyayı silmeye yetkiniz yok" });
+      }
+
+      const relativePath = file.filePath.replace(/^\/uploads\//, "");
+      const physicalPath = path.join(uploadDir, relativePath);
+      if (fs.existsSync(physicalPath)) {
+        fs.unlinkSync(physicalPath);
+      }
+
+      await storage.deleteSavedFile(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete archived file error:", error);
+      res.status(500).json({ message: "Arşiv dosyası silinemedi" });
     }
   });
 

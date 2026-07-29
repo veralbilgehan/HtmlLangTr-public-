@@ -239,3 +239,61 @@ export const insertMessageSchema = z.object({
   fileType: z.string().optional().nullable(),
 });
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
+// ─── Services ────────────────────────────────────────────────────────────────
+export interface Service {
+  id: string;
+  userId: string;
+  companyId: string | null;
+  serviceName: string;
+  plate: string;
+  startTime: Date;
+  estimatedDurationMinutes: number;
+  endTime: Date | null;
+  actualDurationMinutes: number | null;
+  differenceMinutes: number | null;
+  fileUrl: string | null;
+  fileName: string | null;
+  fileSize: number | null;
+  fileType: string | null;
+  createdAt: Date | null;
+}
+
+export const insertServiceSchema = z.object({
+  userId: z.string(),
+  companyId: z.string().optional().nullable(),
+  serviceName: z.string().min(1, "Servis adı zorunludur"),
+  plate: z.string().min(1, "Plaka zorunludur"),
+  startTime: z.coerce.date(),
+  estimatedDurationMinutes: z.number().int().min(1, "Tahmini süre 1 dakikadan az olamaz"),
+  endTime: z.coerce.date().optional().nullable(),
+  actualDurationMinutes: z.number().int().optional().nullable(),
+  differenceMinutes: z.number().int().optional().nullable(),
+  fileUrl: z.string().optional().nullable(),
+  fileName: z.string().optional().nullable(),
+  fileSize: z.number().int().optional().nullable(),
+  fileType: z.string().optional().nullable(),
+});
+export type InsertService = z.infer<typeof insertServiceSchema>;
+
+// ─── Saved Files ─────────────────────────────────────────────────────────────
+export interface SavedFile {
+  id: string;
+  companyId: string | null;
+  fileName: string;
+  filePath: string;
+  fileType: string; // 'chat_attachment' | 'shift_report' | 'service_report'
+  fileSize: number | null;
+  createdAt: Date | null;
+  createdBy: string | null; // User ID
+}
+
+export const insertSavedFileSchema = z.object({
+  companyId: z.string().optional().nullable(),
+  fileName: z.string(),
+  filePath: z.string(),
+  fileType: z.string(),
+  fileSize: z.number().int().optional().nullable(),
+  createdBy: z.string().optional().nullable(),
+});
+export type InsertSavedFile = z.infer<typeof insertSavedFileSchema>;
